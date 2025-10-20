@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import logo from "@/assets/logo.png";
 
 const Signup = () => {
   const [email, setEmail] = useState("");
@@ -84,8 +85,8 @@ const Signup = () => {
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-primary/10 via-background to-primary-dark/10 p-4">
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="space-y-1 text-center">
-          <div className="mb-4 text-4xl font-bold bg-gradient-to-r from-primary to-primary-dark bg-clip-text text-transparent">
-            Bay Digital
+          <div className="mb-4 flex justify-center">
+            <img src={logo} alt="Bay Digital" className="h-12" />
           </div>
           <CardTitle className="text-2xl">Create your account</CardTitle>
           <CardDescription>Get started with your website dashboard</CardDescription>

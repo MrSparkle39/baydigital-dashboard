@@ -7,6 +7,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ChevronDown, User, Settings, LogOut } from "lucide-react";
+import logo from "@/assets/logo.png";
 
 export const DashboardHeader = () => {
   const { user, signOut } = useAuth();
@@ -14,12 +15,7 @@ export const DashboardHeader = () => {
   return (
     <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
       <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-full bg-gradient-to-r from-primary to-primary-dark"></div>
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-primary-dark bg-clip-text text-transparent">
-            Bay Digital
-          </h1>
-        </div>
+        <img src={logo} alt="Bay Digital" className="h-8" />
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
