@@ -75,7 +75,7 @@ const mockData = {
 
 const Dashboard = () => {
   const { user } = useAuth();
-  const [userPlan, setUserPlan] = useState<string>("starter");
+  const [userData, setUserData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -83,15 +83,15 @@ const Dashboard = () => {
       if (user) {
         const { data, error } = await supabase
           .from("users")
-          .select("plan, stripe_customer_id")
+          .select("*")
           .eq("id", user.id)
           .single();
         
         if (error) {
           console.error("Error fetching user data:", error);
         } else if (data) {
-          setUserPlan(data.plan);
-          console.log("User plan:", data.plan, "Stripe customer:", data.stripe_customer_id);
+          setUserData(data);
+          console.log("User data loaded:", data);
         }
       }
       setLoading(false);
@@ -109,6 +109,8 @@ const Dashboard = () => {
   }
 
   const newSubmissionsCount = mockData.submissions.filter(s => s.status === "new").length;
+  const userPlan = userData?.plan || "starter";
+  const businessName = userData?.business_name || userData?.full_name || "there";
 
   return (
     <div className="min-h-screen bg-background">
@@ -118,7 +120,7 @@ const Dashboard = () => {
         <div className="mb-8">
           <h2 className="text-3xl font-bold mb-2">Dashboard</h2>
           <p className="text-muted-foreground">
-            Welcome back! Here's what's happening with your website.
+            Welcome back, {businessName}! Here's what's happening with your website.
           </p>
         </div>
 
@@ -127,13 +129,14 @@ const Dashboard = () => {
             plan={userPlan}
             nextBilling={mockData.user.nextBilling}
             amount={mockData.user.amount}
+            subscriptionStatus={userData?.subscription_status}
           />
 
           <WebsiteCard
-            siteUrl={mockData.site.siteUrl}
-            status={mockData.site.status}
-            launchedDate={mockData.site.launchedDate}
-            lastUpdated={mockData.site.lastUpdated}
+            siteUrl={userData?.website_url || userData?.domain || "yoursite.com"}
+            status={userData?.website_status || "pending"}
+            launchedDate={userData?.subscription_start_date ? new Date(userData.subscription_start_date).toLocaleDateString() : "Pending"}
+            lastUpdated={userData?.updated_at ? new Date(userData.updated_at).toLocaleString() : "N/A"}
           />
 
           <QuickLinks />

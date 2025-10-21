@@ -1,116 +1,153 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import Stripe from 'https://esm.sh/stripe@14.21.0';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
+import Stripe from 'https://esm.sh/stripe@14.21.0?target=deno'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+}
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    const { email, password, priceId } = await req.json();
-
-    if (!email || !password || !priceId) {
-      throw new Error('Missing required fields: email, password, priceId');
-    }
-
-    const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-
-    if (!stripeSecretKey) {
-      throw new Error('Missing STRIPE_SECRET_KEY');
-    }
-
-    const stripe = new Stripe(stripeSecretKey, {
+    // Initialize Stripe
+    const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
       apiVersion: '2023-10-16',
-    });
+    })
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    // Initialize Supabase Admin Client
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    )
 
-    console.log('Creating user account for:', email);
-
-    // 1. Create the Supabase user
-    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+    // Parse request body
+    const {
       email,
       password,
-      email_confirm: true, // Auto-confirm for testing
-    });
+      priceId,
+      businessName,
+      industry,
+      location,
+      services,
+      contactName,
+      phone,
+      businessPhone,
+      businessEmail,
+      plan,
+      domain,
+      additionalInfo
+    } = await req.json()
+
+    // Validate required fields
+    if (!email || !password || !priceId) {
+      throw new Error('Missing required fields: email, password, or priceId')
+    }
+
+    console.log('Creating account for:', email)
+
+    // Step 1: Create Supabase Auth user
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true, // Auto-confirm email
+      user_metadata: {
+        full_name: contactName,
+        business_name: businessName,
+        plan: plan,
+        setup_complete: false
+      }
+    })
 
     if (authError) {
-      console.error('Error creating user:', authError);
-      throw authError;
+      console.error('Auth error:', authError)
+      throw new Error(`Failed to create account: ${authError.message}`)
     }
 
-    console.log('User created:', authData.user.id);
+    const userId = authData.user.id
+    console.log('User created:', userId)
 
-    // 2. Create Stripe customer
-    const customer = await stripe.customers.create({
-      email,
-      metadata: {
-        supabase_user_id: authData.user.id,
-      },
-    });
-
-    console.log('Stripe customer created:', customer.id);
-
-    // 3. Update user with Stripe customer ID
-    const { error: updateError } = await supabase
+    // Step 2: Create user profile in database
+    const { error: profileError } = await supabaseAdmin
       .from('users')
-      .update({ stripe_customer_id: customer.id })
-      .eq('id', authData.user.id);
+      .insert({
+        id: userId,
+        email,
+        full_name: contactName,
+        business_name: businessName,
+        industry,
+        location,
+        services,
+        phone,
+        business_phone: businessPhone,
+        business_email: businessEmail,
+        plan,
+        subscription_status: 'pending', // Will be updated by webhook
+        domain,
+        additional_info: additionalInfo,
+        created_at: new Date().toISOString()
+      })
 
-    if (updateError) {
-      console.error('Error updating user with stripe_customer_id:', updateError);
-      throw updateError;
+    if (profileError) {
+      console.error('Profile error:', profileError)
+      // Rollback: delete the auth user
+      await supabaseAdmin.auth.admin.deleteUser(userId)
+      throw new Error(`Failed to create profile: ${profileError.message}`)
     }
 
-    // 4. Create checkout session
-    const successUrl = `${req.headers.get('origin') || 'https://bay.digital'}/dashboard?session_id={CHECKOUT_SESSION_ID}`;
-    const cancelUrl = `${req.headers.get('origin') || 'https://bay.digital'}/`;
+    console.log('Profile created for user:', userId)
 
+    // Step 3: Create Stripe Checkout Session
     const session = await stripe.checkout.sessions.create({
-      customer: customer.id,
-      mode: 'subscription',
-      payment_method_types: ['card'],
+      customer_email: email,
+      client_reference_id: userId, // This links Stripe to Supabase user
       line_items: [
         {
           price: priceId,
           quantity: 1,
         },
       ],
-      success_url: successUrl,
-      cancel_url: cancelUrl,
-    });
+      mode: 'subscription',
+      success_url: `${req.headers.get('origin') || 'https://bay.digital'}/dashboard?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${req.headers.get('origin') || 'https://bay.digital'}/contact.html?canceled=true`,
+      metadata: {
+        user_id: userId,
+        business_name: businessName,
+        plan: plan
+      },
+      subscription_data: {
+        metadata: {
+          user_id: userId,
+          business_name: businessName,
+          plan: plan
+        }
+      }
+    })
 
-    console.log('Checkout session created:', session.id);
+    console.log('Checkout session created:', session.id)
 
+    // Return the checkout URL
     return new Response(
-      JSON.stringify({
-        sessionId: session.id,
-        url: session.url,
-        userId: authData.user.id,
-        customerId: customer.id,
-      }),
+      JSON.stringify({ url: session.url }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
       }
-    );
+    )
+
   } catch (error) {
-    console.error('Checkout error:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    console.error('Error:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
     return new Response(
       JSON.stringify({ error: errorMessage }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400,
       }
-    );
+    )
   }
-});
+})
