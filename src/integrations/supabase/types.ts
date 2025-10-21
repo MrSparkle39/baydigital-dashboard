@@ -172,29 +172,174 @@ export type Database = {
           },
         ]
       }
-      users: {
+      update_tickets: {
         Row: {
-          created_at: string | null
-          email: string
+          admin_notes: string | null
+          assigned_to: string | null
+          completed_at: string | null
+          description: string
           id: string
-          plan: Database["public"]["Enums"]["user_plan"]
-          stripe_customer_id: string | null
+          priority: string | null
+          status: string | null
+          submitted_at: string | null
+          title: string
+          user_id: string | null
         }
         Insert: {
-          created_at?: string | null
-          email: string
-          id: string
-          plan?: Database["public"]["Enums"]["user_plan"]
-          stripe_customer_id?: string | null
+          admin_notes?: string | null
+          assigned_to?: string | null
+          completed_at?: string | null
+          description: string
+          id?: string
+          priority?: string | null
+          status?: string | null
+          submitted_at?: string | null
+          title: string
+          user_id?: string | null
         }
         Update: {
-          created_at?: string | null
-          email?: string
+          admin_notes?: string | null
+          assigned_to?: string | null
+          completed_at?: string | null
+          description?: string
           id?: string
+          priority?: string | null
+          status?: string | null
+          submitted_at?: string | null
+          title?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "update_tickets_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      users: {
+        Row: {
+          additional_info: string | null
+          business_email: string | null
+          business_name: string | null
+          business_phone: string | null
+          created_at: string | null
+          domain: string | null
+          email: string
+          full_name: string | null
+          id: string
+          industry: string | null
+          location: string | null
+          phone: string | null
+          plan: Database["public"]["Enums"]["user_plan"]
+          preview_url: string | null
+          services: string | null
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          subscription_end_date: string | null
+          subscription_start_date: string | null
+          subscription_status: string | null
+          updated_at: string | null
+          website_status: string | null
+          website_url: string | null
+        }
+        Insert: {
+          additional_info?: string | null
+          business_email?: string | null
+          business_name?: string | null
+          business_phone?: string | null
+          created_at?: string | null
+          domain?: string | null
+          email: string
+          full_name?: string | null
+          id: string
+          industry?: string | null
+          location?: string | null
+          phone?: string | null
           plan?: Database["public"]["Enums"]["user_plan"]
+          preview_url?: string | null
+          services?: string | null
           stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          subscription_end_date?: string | null
+          subscription_start_date?: string | null
+          subscription_status?: string | null
+          updated_at?: string | null
+          website_status?: string | null
+          website_url?: string | null
+        }
+        Update: {
+          additional_info?: string | null
+          business_email?: string | null
+          business_name?: string | null
+          business_phone?: string | null
+          created_at?: string | null
+          domain?: string | null
+          email?: string
+          full_name?: string | null
+          id?: string
+          industry?: string | null
+          location?: string | null
+          phone?: string | null
+          plan?: Database["public"]["Enums"]["user_plan"]
+          preview_url?: string | null
+          services?: string | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          subscription_end_date?: string | null
+          subscription_start_date?: string | null
+          subscription_status?: string | null
+          updated_at?: string | null
+          website_status?: string | null
+          website_url?: string | null
         }
         Relationships: []
+      }
+      website_assets: {
+        Row: {
+          asset_type: string
+          file_name: string
+          file_path: string
+          file_size: number | null
+          id: string
+          is_active: boolean | null
+          mime_type: string | null
+          uploaded_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          asset_type: string
+          file_name: string
+          file_path: string
+          file_size?: number | null
+          id?: string
+          is_active?: boolean | null
+          mime_type?: string | null
+          uploaded_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          asset_type?: string
+          file_name?: string
+          file_path?: string
+          file_size?: number | null
+          id?: string
+          is_active?: boolean | null
+          mime_type?: string | null
+          uploaded_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "website_assets_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
