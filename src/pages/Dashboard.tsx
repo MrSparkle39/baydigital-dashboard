@@ -81,14 +81,17 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchUserData = async () => {
       if (user) {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from("users")
-          .select("plan")
+          .select("plan, stripe_customer_id")
           .eq("id", user.id)
           .single();
         
-        if (data) {
+        if (error) {
+          console.error("Error fetching user data:", error);
+        } else if (data) {
           setUserPlan(data.plan);
+          console.log("User plan:", data.plan, "Stripe customer:", data.stripe_customer_id);
         }
       }
       setLoading(false);
