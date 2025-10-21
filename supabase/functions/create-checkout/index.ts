@@ -71,12 +71,10 @@ serve(async (req) => {
     const userId = authData.user.id
     console.log('User created:', userId)
 
-    // Step 2: Create user profile in database
+    // Step 2: Update user profile in database (trigger already created basic row)
     const { error: profileError } = await supabaseAdmin
       .from('users')
-      .insert({
-        id: userId,
-        email,
+      .update({
         full_name: contactName,
         business_name: businessName,
         industry,
@@ -89,17 +87,17 @@ serve(async (req) => {
         subscription_status: 'pending', // Will be updated by webhook
         domain,
         additional_info: additionalInfo,
-        created_at: new Date().toISOString()
       })
+      .eq('id', userId)
 
     if (profileError) {
       console.error('Profile error:', profileError)
       // Rollback: delete the auth user
       await supabaseAdmin.auth.admin.deleteUser(userId)
-      throw new Error(`Failed to create profile: ${profileError.message}`)
+      throw new Error(`Failed to update profile: ${profileError.message}`)
     }
 
-    console.log('Profile created for user:', userId)
+    console.log('Profile updated for user:', userId)
 
     // Step 3: Create Stripe Checkout Session
     const session = await stripe.checkout.sessions.create({
