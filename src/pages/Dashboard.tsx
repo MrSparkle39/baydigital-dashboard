@@ -89,10 +89,14 @@ const Dashboard = () => {
         
         if (error) {
           console.error("Error fetching user data:", error);
+          setUserData(null);
         } else if (data) {
           setUserData(data);
           console.log("User data loaded:", data);
         }
+      } else {
+        // Clear user data when user logs out
+        setUserData(null);
       }
       setLoading(false);
     };
