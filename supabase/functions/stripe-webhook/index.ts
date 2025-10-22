@@ -44,6 +44,9 @@ serve(async (req) => {
           break
         }
 
+        // Fetch the subscription to get current_period_end
+        const subscription = await stripe.subscriptions.retrieve(subscriptionId)
+        
         // Update user with subscription details
         const { error: updateError } = await supabaseAdmin
           .from('users')
@@ -51,7 +54,8 @@ serve(async (req) => {
             subscription_status: 'active',
             stripe_customer_id: customerId,
             stripe_subscription_id: subscriptionId,
-            subscription_start_date: new Date().toISOString(),
+            subscription_start_date: new Date(subscription.current_period_start * 1000).toISOString(),
+            subscription_end_date: new Date(subscription.current_period_end * 1000).toISOString(),
           })
           .eq('id', userId)
 
@@ -60,16 +64,17 @@ serve(async (req) => {
           throw updateError
         }
 
-        console.log('User activated:', userId)
+        console.log('User activated:', userId, 'Next billing:', new Date(subscription.current_period_end * 1000).toISOString())
 
         // TODO: Send welcome email with login credentials
         
         break
       }
 
+      case 'customer.subscription.created':
       case 'customer.subscription.updated': {
         const subscription = event.data.object as Stripe.Subscription
-        console.log('Subscription updated:', subscription.id)
+        console.log('Subscription event:', event.type, subscription.id)
         
         const userId = subscription.metadata?.user_id
 
@@ -78,22 +83,23 @@ serve(async (req) => {
           break
         }
 
-        // Update subscription status
+        // Update subscription status and end date
         const status = subscription.status === 'active' ? 'active' : 'inactive'
         
         const { error: updateError } = await supabaseAdmin
           .from('users')
           .update({
             subscription_status: status,
+            subscription_end_date: new Date(subscription.current_period_end * 1000).toISOString(),
           })
           .eq('id', userId)
 
         if (updateError) {
-          console.error('Error updating subscription status:', updateError)
+          console.error('Error updating subscription:', updateError)
           throw updateError
         }
 
-        console.log('Subscription status updated:', status)
+        console.log('Subscription updated:', status, 'Next billing:', new Date(subscription.current_period_end * 1000).toISOString())
         break
       }
 
