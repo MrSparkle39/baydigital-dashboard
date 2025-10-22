@@ -135,8 +135,8 @@ const Dashboard = () => {
           <WebsiteCard
             siteUrl={userData?.website_url || userData?.domain || "yoursite.com"}
             status={userData?.website_status || "pending"}
-            launchedDate={userData?.subscription_start_date ? new Date(userData.subscription_start_date).toLocaleDateString() : "Pending"}
-            lastUpdated={userData?.updated_at ? new Date(userData.updated_at).toLocaleString() : "N/A"}
+            launchedDate={userData?.subscription_start_date ? new Date(userData.subscription_start_date).toLocaleDateString('en-AU') : "Pending"}
+            lastUpdated={userData?.updated_at ? new Date(userData.updated_at).toLocaleString('en-AU') : "N/A"}
           />
 
           <QuickLinks />
