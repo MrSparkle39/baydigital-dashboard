@@ -44,14 +44,24 @@ serve(async (req) => {
           break
         }
 
-        // Fetch the subscription to get current_period_end
+        // Fetch the subscription to get current_period_end and status
         const subscription = await stripe.subscriptions.retrieve(subscriptionId)
+        
+        // Map Stripe status to our app statuses
+        const stripeStatus = subscription.status
+        const mappedStatus =
+          stripeStatus === 'active' || stripeStatus === 'trialing' ? 'active' :
+          stripeStatus === 'past_due' ? 'past_due' :
+          stripeStatus === 'canceled' ? 'cancelled' :
+          stripeStatus === 'unpaid' ? 'past_due' :
+          stripeStatus === 'incomplete' ? 'pending' :
+          'pending'
         
         // Update user with subscription details
         const { error: updateError } = await supabaseAdmin
           .from('users')
           .update({
-            subscription_status: 'active',
+            subscription_status: mappedStatus,
             stripe_customer_id: customerId,
             stripe_subscription_id: subscriptionId,
             subscription_start_date: new Date(subscription.current_period_start * 1000).toISOString(),
@@ -64,7 +74,7 @@ serve(async (req) => {
           throw updateError
         }
 
-        console.log('User activated:', userId, 'Next billing:', new Date(subscription.current_period_end * 1000).toISOString())
+        console.log('User activated:', userId, 'Status:', mappedStatus, 'Next billing:', new Date(subscription.current_period_end * 1000).toISOString())
 
         // TODO: Send welcome email with login credentials
         
