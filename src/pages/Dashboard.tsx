@@ -112,6 +112,30 @@ const Dashboard = () => {
   const userPlan = userData?.plan || "starter";
   const businessName = userData?.business_name || userData?.full_name || "there";
 
+  // Calculate billing info based on actual plan and subscription data
+  const getPlanAmount = (plan: string) => {
+    switch(plan) {
+      case 'starter': return '$29.00';
+      case 'professional': return '$49.00';
+      case 'premium': return '$99.00';
+      default: return '$29.00';
+    }
+  };
+
+  const getNextBillingDate = () => {
+    if (userData?.subscription_end_date) {
+      return new Date(userData.subscription_end_date).toLocaleDateString('en-US', { 
+        month: 'long', 
+        day: 'numeric', 
+        year: 'numeric' 
+      });
+    }
+    return 'Pending subscription activation';
+  };
+
+  const billingAmount = getPlanAmount(userPlan);
+  const nextBillingDate = getNextBillingDate();
+
   return (
     <div className="min-h-screen bg-background">
       <DashboardHeader />
@@ -127,8 +151,8 @@ const Dashboard = () => {
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           <AccountCard
             plan={userPlan}
-            nextBilling={mockData.user.nextBilling}
-            amount={mockData.user.amount}
+            nextBilling={nextBillingDate}
+            amount={billingAmount}
             subscriptionStatus={userData?.subscription_status}
           />
 
