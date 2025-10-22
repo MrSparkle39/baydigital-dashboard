@@ -87,19 +87,30 @@ serve(async (req) => {
         console.log('Subscription event:', event.type, subscription.id)
         
         const userId = subscription.metadata?.user_id
+        const customerId = subscription.customer as string | null
 
         if (!userId) {
           console.error('No user ID found in subscription metadata')
           break
         }
 
-        // Update subscription status and end date
-        const status = subscription.status === 'active' ? 'active' : 'inactive'
+        // Map Stripe status to our app statuses
+        const stripeStatus = subscription.status
+        const mappedStatus =
+          stripeStatus === 'active' || stripeStatus === 'trialing' ? 'active' :
+          stripeStatus === 'past_due' ? 'past_due' :
+          stripeStatus === 'canceled' ? 'cancelled' :
+          stripeStatus === 'unpaid' ? 'past_due' :
+          stripeStatus === 'incomplete' ? 'pending' :
+          'pending'
         
         const { error: updateError } = await supabaseAdmin
           .from('users')
           .update({
-            subscription_status: status,
+            subscription_status: mappedStatus,
+            stripe_customer_id: customerId ?? undefined,
+            stripe_subscription_id: subscription.id,
+            subscription_start_date: new Date(subscription.current_period_start * 1000).toISOString(),
             subscription_end_date: new Date(subscription.current_period_end * 1000).toISOString(),
           })
           .eq('id', userId)
@@ -109,7 +120,7 @@ serve(async (req) => {
           throw updateError
         }
 
-        console.log('Subscription updated:', status, 'Next billing:', new Date(subscription.current_period_end * 1000).toISOString())
+        console.log('Subscription synced from', event.type, 'Status:', mappedStatus, 'Next billing:', new Date(subscription.current_period_end * 1000).toISOString())
         break
       }
 
