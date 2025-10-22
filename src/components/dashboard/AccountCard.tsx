@@ -1,7 +1,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CreditCard, Crown } from "lucide-react";
+import { CreditCard, Crown, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { supabase } from "@/integrations/supabase/client";
+import { useState } from "react";
+import { toast } from "sonner";
 
 interface AccountCardProps {
   plan: string;
@@ -11,12 +14,31 @@ interface AccountCardProps {
 }
 
 export const AccountCard = ({ plan, nextBilling, amount, subscriptionStatus }: AccountCardProps) => {
+  const [syncing, setSyncing] = useState(false);
   const planDisplay = plan.charAt(0).toUpperCase() + plan.slice(1);
   const isPremium = plan === "premium";
+  
+  const handleSyncBilling = async () => {
+    setSyncing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('sync-subscription');
+      
+      if (error) throw error;
+      
+      toast.success('Billing data refreshed successfully');
+      window.location.reload();
+    } catch (error) {
+      console.error('Sync error:', error);
+      toast.error('Failed to refresh billing data');
+    } finally {
+      setSyncing(false);
+    }
+  };
   
   const getStatusColor = (status?: string) => {
     switch (status) {
       case 'active': return 'bg-green-500';
+      case 'trialing': return 'bg-blue-500';
       case 'pending': return 'bg-yellow-500';
       case 'past_due': return 'bg-orange-500';
       case 'cancelled': return 'bg-red-500';
@@ -56,9 +78,20 @@ export const AccountCard = ({ plan, nextBilling, amount, subscriptionStatus }: A
           <div className="text-sm text-muted-foreground">Amount</div>
           <div className="font-medium">{amount}/month</div>
         </div>
-        <Button variant="outline" className="w-full">
-          Manage Billing →
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            className="flex-1"
+            onClick={handleSyncBilling}
+            disabled={syncing}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          <Button variant="outline" className="flex-1">
+            Manage Billing →
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );
