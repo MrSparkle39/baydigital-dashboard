@@ -52,7 +52,7 @@ const Login = () => {
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="space-y-1 text-center">
           <div className="mb-4 flex justify-center">
-            <img src={logo} alt="Bay Digital" className="h-12" />
+            <img src={logo} alt="Bay Digital" className="h-48" />
           </div>
           <CardTitle className="text-2xl">Welcome back</CardTitle>
           <CardDescription>Sign in to your account</CardDescription>
