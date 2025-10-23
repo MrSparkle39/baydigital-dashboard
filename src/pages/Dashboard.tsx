@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { AccountCard } from "@/components/dashboard/AccountCard";
@@ -75,12 +76,27 @@ const mockData = {
 
 const Dashboard = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [userData, setUserData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchUserData = async () => {
       if (user) {
+        // Check if user is admin
+        const { data: roleData } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", user.id)
+          .eq("role", "admin")
+          .maybeSingle();
+
+        // If admin, redirect to admin dashboard
+        if (roleData) {
+          navigate("/admin", { replace: true });
+          return;
+        }
+
         const { data, error } = await supabase
           .from("users")
           .select("*")
@@ -102,7 +118,7 @@ const Dashboard = () => {
     };
 
     fetchUserData();
-  }, [user]);
+  }, [user, navigate]);
 
   if (loading) {
     return (
