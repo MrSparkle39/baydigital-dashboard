@@ -1,11 +1,9 @@
-import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Copy, Plus, ExternalLink, Trash2 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Copy, Plus, ExternalLink, Trash2, Globe } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -34,8 +32,11 @@ interface Site {
   submission_count?: number;
 }
 
-const ManageSites = () => {
-  const navigate = useNavigate();
+interface UserSitesManagerProps {
+  userId: string;
+}
+
+export const UserSitesManager = ({ userId }: UserSitesManagerProps) => {
   const { toast } = useToast();
   const [sites, setSites] = useState<Site[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,17 +50,14 @@ const ManageSites = () => {
 
   useEffect(() => {
     fetchSites();
-  }, []);
+  }, [userId]);
 
   const fetchSites = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
       const { data: sitesData, error } = await supabase
         .from('sites')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -95,13 +93,10 @@ const ManageSites = () => {
     setSubmitting(true);
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
-
       const { error } = await supabase
         .from('sites')
         .insert({
-          user_id: user.id,
+          user_id: userId,
           site_name: siteName,
           site_url: siteUrl,
           status: status,
@@ -185,22 +180,19 @@ const ManageSites = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <DashboardHeader />
-      <main className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-3xl font-bold">Manage Sites</h2>
-            <p className="text-muted-foreground mt-1">
-              Add and manage client websites for form submissions
-            </p>
-          </div>
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <Globe className="h-5 w-5" />
+            Client Sites
+          </CardTitle>
           
           <Dialog open={isAddingDialogOpen} onOpenChange={setIsAddingDialogOpen}>
             <DialogTrigger asChild>
-              <Button>
+              <Button size="sm">
                 <Plus className="mr-2 h-4 w-4" />
-                Add New Site
+                Add Site
               </Button>
             </DialogTrigger>
             <DialogContent>
@@ -261,97 +253,80 @@ const ManageSites = () => {
             </DialogContent>
           </Dialog>
         </div>
-
+      </CardHeader>
+      <CardContent>
         {loading ? (
-          <div className="text-center py-12">Loading sites...</div>
+          <div className="text-center py-8 text-sm text-muted-foreground">Loading sites...</div>
         ) : sites.length === 0 ? (
-          <Card className="p-12 text-center">
-            <p className="text-muted-foreground mb-4">No sites yet</p>
-            <Button onClick={() => setIsAddingDialogOpen(true)}>
+          <div className="text-center py-8">
+            <p className="text-sm text-muted-foreground mb-4">No sites yet</p>
+            <Button size="sm" onClick={() => setIsAddingDialogOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
-              Add Your First Site
+              Add First Site
             </Button>
-          </Card>
+          </div>
         ) : (
           <div className="space-y-4">
             {sites.map((site) => (
-              <Card key={site.id} className="p-6 hover:shadow-md transition-all">
-                <div className="space-y-4">
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-1 flex-1">
-                      <div className="flex items-center gap-3 flex-wrap">
-                        <h3 className="font-semibold text-lg">{site.site_name}</h3>
-                        <Badge variant={getStatusColor(site.status)}>
-                          {site.status}
+              <div key={site.id} className="p-4 border rounded-lg space-y-3">
+                <div className="flex items-start justify-between">
+                  <div className="space-y-1 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h4 className="font-semibold">{site.site_name}</h4>
+                      <Badge variant={getStatusColor(site.status)} className="text-xs">
+                        {site.status}
+                      </Badge>
+                      {site.submission_count !== undefined && (
+                        <Badge variant="outline" className="text-xs">
+                          {site.submission_count} submission{site.submission_count !== 1 ? 's' : ''}
                         </Badge>
-                        {site.submission_count !== undefined && (
-                          <Badge variant="outline">
-                            {site.submission_count} submission{site.submission_count !== 1 ? 's' : ''}
-                          </Badge>
-                        )}
-                      </div>
-                      
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <ExternalLink className="h-4 w-4" />
-                        <a 
-                          href={`https://${site.site_url}`} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="hover:underline"
-                        >
-                          {site.site_url}
-                        </a>
-                      </div>
+                      )}
                     </div>
+                    
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <ExternalLink className="h-3 w-3" />
+                      <a 
+                        href={`https://${site.site_url}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="hover:underline"
+                      >
+                        {site.site_url}
+                      </a>
+                    </div>
+                  </div>
 
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleDeleteSite(site.id)}
+                    className="text-destructive hover:text-destructive h-8 w-8"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Label className="text-xs text-muted-foreground min-w-[60px]">Site ID:</Label>
+                    <code className="flex-1 px-2 py-1 bg-muted rounded text-xs font-mono break-all">
+                      {site.id}
+                    </code>
                     <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDeleteSite(site.id)}
-                      className="text-destructive hover:text-destructive"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => copyToClipboard(site.id, "Site ID")}
+                      className="h-7"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Copy className="h-3 w-3" />
                     </Button>
                   </div>
 
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Label className="text-xs text-muted-foreground min-w-[80px]">Site ID:</Label>
-                      <code className="flex-1 px-3 py-2 bg-muted rounded text-xs font-mono">
-                        {site.id}
-                      </code>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => copyToClipboard(site.id, "Site ID")}
-                      >
-                        <Copy className="h-3 w-3" />
-                      </Button>
-                    </div>
-
-                    <div className="p-4 bg-muted/50 rounded-lg space-y-2">
-                      <p className="text-xs font-semibold">Form Submission Endpoint:</p>
-                      <code className="block text-xs font-mono break-all">
-                        https://ovhuafsxhdbhaqccfpmt.supabase.co/functions/v1/submit-contact-form
-                      </code>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => copyToClipboard(
-                          'https://ovhuafsxhdbhaqccfpmt.supabase.co/functions/v1/submit-contact-form',
-                          "Endpoint URL"
-                        )}
-                      >
-                        <Copy className="h-3 w-3 mr-2" />
-                        Copy Endpoint
-                      </Button>
-                    </div>
-
-                    <details className="text-xs">
-                      <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
-                        View example form code
-                      </summary>
-                      <pre className="mt-2 p-3 bg-muted rounded overflow-x-auto">
+                  <details className="text-xs">
+                    <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
+                      View form code
+                    </summary>
+                    <pre className="mt-2 p-2 bg-muted rounded overflow-x-auto text-xs">
 {`fetch('https://ovhuafsxhdbhaqccfpmt.supabase.co/functions/v1/submit-contact-form', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
@@ -360,20 +335,17 @@ const ManageSites = () => {
     name: 'John Doe',
     email: 'john@example.com',
     phone: '555-1234',
-    message: 'Contact form message here'
+    message: 'Message here'
   })
 })`}
-                      </pre>
-                    </details>
-                  </div>
+                    </pre>
+                  </details>
                 </div>
-              </Card>
+              </div>
             ))}
           </div>
         )}
-      </main>
-    </div>
+      </CardContent>
+    </Card>
   );
 };
-
-export default ManageSites;

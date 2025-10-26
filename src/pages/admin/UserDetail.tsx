@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { ArrowLeft, Save } from "lucide-react";
 import { Database } from "@/integrations/supabase/types";
 import { AnalyticsViewer } from "@/components/admin/AnalyticsViewer";
+import { UserSitesManager } from "@/components/admin/UserSitesManager";
 
 type User = Database["public"]["Tables"]["users"]["Row"];
 type Ticket = Database["public"]["Tables"]["update_tickets"]["Row"];
@@ -113,6 +114,7 @@ export default function AdminUserDetail() {
       <Tabs defaultValue="overview" className="w-full">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="sites">Sites</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
           <TabsTrigger value="tickets">Tickets ({tickets.length})</TabsTrigger>
           <TabsTrigger value="requests">Change Requests ({changeRequests.length})</TabsTrigger>
@@ -210,6 +212,10 @@ export default function AdminUserDetail() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="sites" className="space-y-4">
+          <UserSitesManager userId={userId!} />
         </TabsContent>
 
         <TabsContent value="analytics" className="space-y-4">
