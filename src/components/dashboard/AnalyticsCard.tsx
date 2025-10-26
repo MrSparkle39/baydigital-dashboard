@@ -8,8 +8,11 @@ interface AnalyticsCardProps {
   ga4PropertyId?: string | null;
   visitors?: number;
   pageViews?: number;
+  sessions?: number;
+  engagementRate?: number;
   topPages?: Array<{ page: string; views: number }>;
   trafficSources?: Array<{ source: string; visitors: number }>;
+  devices?: Array<{ device: string; sessions: number }>;
   loading?: boolean;
 }
 
@@ -18,8 +21,11 @@ export const AnalyticsCard = ({
   ga4PropertyId,
   visitors = 0,
   pageViews = 0,
+  sessions = 0,
+  engagementRate = 0,
   topPages = [],
   trafficSources = [],
+  devices = [],
   loading = false
 }: AnalyticsCardProps) => {
   const hasAnalyticsPlan = plan === "professional" || plan === "premium";
@@ -122,14 +128,34 @@ export const AnalyticsCard = ({
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-secondary/20 p-4 rounded-lg">
-                <p className="text-sm text-muted-foreground">Total Visitors</p>
-                <p className="text-2xl font-bold">{visitors.toLocaleString()}</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-secondary/20 p-3 rounded-lg">
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Users className="h-3 w-3" />
+                  Visitors
+                </p>
+                <p className="text-xl font-bold mt-1">{visitors.toLocaleString()}</p>
               </div>
-              <div className="bg-secondary/20 p-4 rounded-lg">
-                <p className="text-sm text-muted-foreground">Page Views</p>
-                <p className="text-2xl font-bold">{pageViews.toLocaleString()}</p>
+              <div className="bg-secondary/20 p-3 rounded-lg">
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <FileText className="h-3 w-3" />
+                  Page Views
+                </p>
+                <p className="text-xl font-bold mt-1">{pageViews.toLocaleString()}</p>
+              </div>
+              <div className="bg-secondary/20 p-3 rounded-lg">
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <BarChart3 className="h-3 w-3" />
+                  Sessions
+                </p>
+                <p className="text-xl font-bold mt-1">{sessions.toLocaleString()}</p>
+              </div>
+              <div className="bg-secondary/20 p-3 rounded-lg">
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <TrendingUp className="h-3 w-3" />
+                  Engagement
+                </p>
+                <p className="text-xl font-bold mt-1">{engagementRate.toFixed(1)}%</p>
               </div>
             </div>
 
@@ -163,10 +189,30 @@ export const AnalyticsCard = ({
                   Traffic Sources
                 </h4>
                 <div className="space-y-2">
-                  {trafficSources.slice(0, 5).map((source, index) => (
+                  {trafficSources.slice(0, 3).map((source, index) => (
                     <div key={index} className="flex justify-between text-sm">
                       <span className="capitalize">{source.source}</span>
                       <span className="font-semibold">{source.visitors.toLocaleString()}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {devices && devices.length > 0 && (
+              <div>
+                <h4 className="text-sm font-semibold mb-2">Device Breakdown</h4>
+                <div className="space-y-2">
+                  {devices.map((device, index) => (
+                    <div key={index} className="space-y-1">
+                      <div className="flex justify-between text-sm">
+                        <span className="capitalize">{device.device}</span>
+                        <span className="font-semibold">{device.sessions.toLocaleString()}</span>
+                      </div>
+                      <Progress 
+                        value={(device.sessions / (sessions || 1)) * 100} 
+                        className="h-1.5"
+                      />
                     </div>
                   ))}
                 </div>

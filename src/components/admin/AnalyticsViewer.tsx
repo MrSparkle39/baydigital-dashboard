@@ -103,7 +103,7 @@ export function AnalyticsViewer({ propertyId, userName }: AnalyticsViewerProps) 
         </Button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Visitors</CardTitle>
@@ -111,7 +111,7 @@ export function AnalyticsViewer({ propertyId, userName }: AnalyticsViewerProps) 
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{analyticsData.visitors.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">Unique visitors in the last 30 days</p>
+            <p className="text-xs text-muted-foreground">Unique visitors</p>
           </CardContent>
         </Card>
 
@@ -122,7 +122,29 @@ export function AnalyticsViewer({ propertyId, userName }: AnalyticsViewerProps) 
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{analyticsData.pageViews.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">Total page views in the last 30 days</p>
+            <p className="text-xs text-muted-foreground">Total page views</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Sessions</CardTitle>
+            <BarChart3 className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{analyticsData.sessions?.toLocaleString() || 0}</div>
+            <p className="text-xs text-muted-foreground">Total sessions</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Engagement Rate</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{analyticsData.engagementRate?.toFixed(1) || 0}%</div>
+            <p className="text-xs text-muted-foreground">User engagement</p>
           </CardContent>
         </Card>
       </div>
@@ -154,20 +176,70 @@ export function AnalyticsViewer({ propertyId, userName }: AnalyticsViewerProps) 
         </Card>
       )}
 
-      {analyticsData.trafficSources && analyticsData.trafficSources.length > 0 && (
+      <div className="grid gap-4 md:grid-cols-2">
+        {analyticsData.trafficSources && analyticsData.trafficSources.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                <TrendingUp className="h-4 w-4" />
+                Traffic Sources
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {analyticsData.trafficSources.slice(0, 10).map((source: any, index: number) => (
+                  <div key={index} className="flex justify-between text-sm">
+                    <span className="capitalize font-medium">{source.source}</span>
+                    <span className="font-semibold">{source.visitors.toLocaleString()} visitors</span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+        
+        {analyticsData.devices && analyticsData.devices.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                <BarChart3 className="h-4 w-4" />
+                Device Breakdown
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {analyticsData.devices.map((device: any, index: number) => (
+                  <div key={index} className="space-y-1">
+                    <div className="flex justify-between text-sm">
+                      <span className="capitalize font-medium">{device.device}</span>
+                      <span className="font-semibold">{device.sessions.toLocaleString()} sessions</span>
+                    </div>
+                    <Progress 
+                      value={(device.sessions / (analyticsData.sessions || 1)) * 100} 
+                      className="h-2"
+                    />
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+      
+      {analyticsData.topCountries && analyticsData.topCountries.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
-              <TrendingUp className="h-4 w-4" />
-              Traffic Sources
+              <Users className="h-4 w-4" />
+              Top Countries
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
-              {analyticsData.trafficSources.slice(0, 10).map((source: any, index: number) => (
+            <div className="grid gap-2 sm:grid-cols-2">
+              {analyticsData.topCountries.slice(0, 10).map((country: any, index: number) => (
                 <div key={index} className="flex justify-between text-sm">
-                  <span className="capitalize font-medium">{source.source}</span>
-                  <span className="font-semibold">{source.visitors.toLocaleString()} visitors</span>
+                  <span className="font-medium">{country.country}</span>
+                  <span className="font-semibold">{country.visitors.toLocaleString()} visitors</span>
                 </div>
               ))}
             </div>
