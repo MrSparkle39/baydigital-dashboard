@@ -76,7 +76,8 @@ export default function AdminUserDetail() {
       .eq("id", userId!);
 
     if (error) {
-      toast.error("Failed to update website details");
+      console.error("Website update error:", error);
+      toast.error(`Failed to update website details: ${error.message}`);
     } else {
       toast.success("Website details updated successfully");
       fetchUserData();
