@@ -83,8 +83,12 @@ serve(async (req) => {
 
     const { access_token } = await tokenResponse.json();
 
-    // Fetch analytics data
-    const analyticsResponse = await fetch(
+    // Use 28 days to match GA4 default
+    const dateRange = { startDate: startDate || "28daysAgo", endDate: endDate || "today" };
+
+    // Run separate queries to avoid double-counting
+    // Query 1: Overall metrics
+    const overallResponse = await fetch(
       `https://analyticsdata.googleapis.com/v1beta/properties/${propertyId}:runReport`,
       {
         method: "POST",
@@ -93,13 +97,7 @@ serve(async (req) => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          dateRanges: [{ startDate: startDate || "30daysAgo", endDate: endDate || "today" }],
-          dimensions: [
-            { name: "pagePath" },
-            { name: "sessionSource" },
-            { name: "deviceCategory" },
-            { name: "country" }
-          ],
+          dateRanges: [dateRange],
           metrics: [
             { name: "activeUsers" },
             { name: "screenPageViews" },
@@ -111,97 +109,131 @@ serve(async (req) => {
       }
     );
 
-    if (!analyticsResponse.ok) {
-      const error = await analyticsResponse.text();
-      console.error('Analytics API error:', error);
-      throw new Error('Failed to fetch analytics data');
+    if (!overallResponse.ok) {
+      const error = await overallResponse.text();
+      console.error('Overall metrics error:', error);
+      throw new Error('Failed to fetch overall metrics');
     }
 
-    const analyticsData = await analyticsResponse.json();
-
-    // Process the data
-    let totalVisitors = 0;
-    let totalPageViews = 0;
-    let totalSessions = 0;
-    let totalEngagementTime = 0;
-    let totalEngagementRate = 0;
-    let rowCount = 0;
+    const overallData = await overallResponse.json();
     
-    const topPagesMap = new Map<string, number>();
-    const trafficSourcesMap = new Map<string, number>();
-    const deviceMap = new Map<string, number>();
-    const countryMap = new Map<string, number>();
+    const totalVisitors = parseInt(overallData.rows?.[0]?.metricValues[0]?.value || '0');
+    const totalPageViews = parseInt(overallData.rows?.[0]?.metricValues[1]?.value || '0');
+    const totalSessions = parseInt(overallData.rows?.[0]?.metricValues[2]?.value || '0');
+    const avgSessionDuration = Math.round(parseFloat(overallData.rows?.[0]?.metricValues[3]?.value || '0'));
+    const avgEngagementRate = Math.round(parseFloat(overallData.rows?.[0]?.metricValues[4]?.value || '0') * 1000) / 10;
 
-    analyticsData.rows?.forEach((row: any) => {
-      const pagePath = row.dimensionValues[0].value;
-      const source = row.dimensionValues[1].value;
-      const device = row.dimensionValues[2].value;
-      const country = row.dimensionValues[3].value;
-      
-      const visitors = parseInt(row.metricValues[0].value || '0');
-      const pageViews = parseInt(row.metricValues[1].value || '0');
-      const sessions = parseInt(row.metricValues[2].value || '0');
-      const avgSessionDuration = parseFloat(row.metricValues[3].value || '0');
-      const engagementRate = parseFloat(row.metricValues[4].value || '0');
+    // Query 2: Top pages
+    const pagesResponse = await fetch(
+      `https://analyticsdata.googleapis.com/v1beta/properties/${propertyId}:runReport`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${access_token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          dateRanges: [dateRange],
+          dimensions: [{ name: "pagePath" }],
+          metrics: [{ name: "screenPageViews" }],
+          orderBys: [{ metric: { metricName: "screenPageViews" }, desc: true }],
+          limit: 10,
+        }),
+      }
+    );
 
-      totalVisitors += visitors;
-      totalPageViews += pageViews;
-      totalSessions += sessions;
-      totalEngagementTime += avgSessionDuration * sessions;
-      totalEngagementRate += engagementRate;
-      rowCount++;
+    const pagesData = await pagesResponse.json();
+    const topPages = pagesData.rows?.map((row: any) => ({
+      page: row.dimensionValues[0].value,
+      views: parseInt(row.metricValues[0].value || '0'),
+    })) || [];
 
-      // Aggregate page views by path
-      topPagesMap.set(pagePath, (topPagesMap.get(pagePath) || 0) + pageViews);
-      
-      // Aggregate by traffic source
-      trafficSourcesMap.set(source, (trafficSourcesMap.get(source) || 0) + visitors);
-      
-      // Aggregate by device
-      deviceMap.set(device, (deviceMap.get(device) || 0) + sessions);
-      
-      // Aggregate by country
-      countryMap.set(country, (countryMap.get(country) || 0) + visitors);
-    });
+    // Query 3: Traffic sources
+    const sourcesResponse = await fetch(
+      `https://analyticsdata.googleapis.com/v1beta/properties/${propertyId}:runReport`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${access_token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          dateRanges: [dateRange],
+          dimensions: [{ name: "sessionSource" }],
+          metrics: [{ name: "activeUsers" }],
+          orderBys: [{ metric: { metricName: "activeUsers" }, desc: true }],
+          limit: 10,
+        }),
+      }
+    );
 
-    // Format top pages
-    const topPages = Array.from(topPagesMap.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 10)
-      .map(([page, views]) => ({ page, views }));
+    const sourcesData = await sourcesResponse.json();
+    const trafficSources = sourcesData.rows?.map((row: any) => ({
+      source: row.dimensionValues[0].value,
+      visitors: parseInt(row.metricValues[0].value || '0'),
+    })) || [];
 
-    // Format traffic sources
-    const trafficSources = Array.from(trafficSourcesMap.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 10)
-      .map(([source, visitors]) => ({ source, visitors }));
-      
-    // Format devices
-    const devices = Array.from(deviceMap.entries())
-      .sort((a, b) => b[1] - a[1])
-      .map(([device, sessions]) => ({ device, sessions }));
-      
-    // Format countries
-    const topCountries = Array.from(countryMap.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 10)
-      .map(([country, visitors]) => ({ country, visitors }));
-      
-    // Calculate averages
-    const avgSessionDuration = totalSessions > 0 ? totalEngagementTime / totalSessions : 0;
-    const avgEngagementRate = rowCount > 0 ? (totalEngagementRate / rowCount) * 100 : 0;
+    // Query 4: Device breakdown
+    const devicesResponse = await fetch(
+      `https://analyticsdata.googleapis.com/v1beta/properties/${propertyId}:runReport`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${access_token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          dateRanges: [dateRange],
+          dimensions: [{ name: "deviceCategory" }],
+          metrics: [{ name: "sessions" }],
+          orderBys: [{ metric: { metricName: "sessions" }, desc: true }],
+        }),
+      }
+    );
+
+    const devicesData = await devicesResponse.json();
+    const devices = devicesData.rows?.map((row: any) => ({
+      device: row.dimensionValues[0].value,
+      sessions: parseInt(row.metricValues[0].value || '0'),
+    })) || [];
+
+    // Query 5: Top countries
+    const countriesResponse = await fetch(
+      `https://analyticsdata.googleapis.com/v1beta/properties/${propertyId}:runReport`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${access_token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          dateRanges: [dateRange],
+          dimensions: [{ name: "country" }],
+          metrics: [{ name: "activeUsers" }],
+          orderBys: [{ metric: { metricName: "activeUsers" }, desc: true }],
+          limit: 10,
+        }),
+      }
+    );
+
+    const countriesData = await countriesResponse.json();
+    const topCountries = countriesData.rows?.map((row: any) => ({
+      country: row.dimensionValues[0].value,
+      visitors: parseInt(row.metricValues[0].value || '0'),
+    })) || [];
 
     return new Response(
       JSON.stringify({
         visitors: totalVisitors,
         pageViews: totalPageViews,
         sessions: totalSessions,
-        avgSessionDuration: Math.round(avgSessionDuration),
-        engagementRate: Math.round(avgEngagementRate * 10) / 10,
+        avgSessionDuration,
+        engagementRate: avgEngagementRate,
         topPages,
         trafficSources,
         devices,
         topCountries,
+        dateRange: "Last 28 days",
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },

@@ -15,6 +15,7 @@ interface AnalyticsCardProps {
   trafficSources?: Array<{ source: string; visitors: number }>;
   devices?: Array<{ device: string; sessions: number }>;
   topCountries?: Array<{ country: string; visitors: number }>;
+  dateRange?: string;
   loading?: boolean;
 }
 
@@ -30,6 +31,7 @@ export const AnalyticsCard = ({
   trafficSources = [],
   devices = [],
   topCountries = [],
+  dateRange = "Last 28 days",
   loading = false
 }: AnalyticsCardProps) => {
   const hasAnalyticsPlan = plan === "professional" || plan === "premium";
@@ -102,9 +104,12 @@ export const AnalyticsCard = ({
   return (
     <Card className="hover:shadow-md transition-all">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <BarChart3 className="h-5 w-5" />
-          Site Analytics
+        <CardTitle className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <BarChart3 className="h-5 w-5" />
+            Site Analytics
+          </div>
+          <span className="text-xs font-normal text-muted-foreground">{dateRange}</span>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">

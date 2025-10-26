@@ -133,7 +133,7 @@ const Dashboard = () => {
       const { data, error } = await supabase.functions.invoke('fetch-ga4-analytics', {
         body: { 
           propertyId,
-          startDate: '30daysAgo',
+          startDate: '28daysAgo',
           endDate: 'today'
         }
       });
@@ -227,6 +227,7 @@ const Dashboard = () => {
             trafficSources={analyticsData?.trafficSources}
             devices={analyticsData?.devices}
             topCountries={analyticsData?.topCountries}
+            dateRange={analyticsData?.dateRange}
             loading={analyticsLoading}
           />
 
