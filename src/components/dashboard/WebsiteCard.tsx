@@ -13,13 +13,17 @@ interface WebsiteCardProps {
 export const WebsiteCard = ({ siteUrl, status, launchedDate, lastUpdated }: WebsiteCardProps) => {
   const statusIcons = {
     live: <CheckCircle className="h-4 w-4 text-success" />,
+    active: <CheckCircle className="h-4 w-4 text-success" />,
     building: <Clock className="h-4 w-4 text-warning" />,
+    pending: <Clock className="h-4 w-4 text-muted-foreground" />,
     maintenance: <AlertCircle className="h-4 w-4 text-warning" />,
   };
 
   const statusColors = {
     live: "bg-success/10 text-success border-success/20",
+    active: "bg-success/10 text-success border-success/20",
     building: "bg-warning/10 text-warning border-warning/20",
+    pending: "bg-muted text-muted-foreground border-muted",
     maintenance: "bg-warning/10 text-warning border-warning/20",
   };
 

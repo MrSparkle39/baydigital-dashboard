@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { ArrowLeft, Save } from "lucide-react";
 import { Database } from "@/integrations/supabase/types";
@@ -24,6 +25,8 @@ export default function AdminUserDetail() {
   const [changeRequests, setChangeRequests] = useState<ChangeRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [ga4PropertyId, setGa4PropertyId] = useState("");
+  const [websiteStatus, setWebsiteStatus] = useState("");
+  const [websiteUrl, setWebsiteUrl] = useState("");
 
   useEffect(() => {
     if (userId) {
@@ -41,6 +44,8 @@ export default function AdminUserDetail() {
     if (userResult.data) {
       setUser(userResult.data);
       setGa4PropertyId(userResult.data.ga4_property_id || "");
+      setWebsiteStatus(userResult.data.website_status || "pending");
+      setWebsiteUrl(userResult.data.website_url || "");
     }
     if (ticketsResult.data) setTickets(ticketsResult.data);
     if (changeRequestsResult.data) setChangeRequests(changeRequestsResult.data);
@@ -57,6 +62,23 @@ export default function AdminUserDetail() {
       toast.error("Failed to update GA4 property ID");
     } else {
       toast.success("GA4 property ID updated successfully");
+      fetchUserData();
+    }
+  };
+
+  const saveWebsiteDetails = async () => {
+    const { error } = await supabase
+      .from("users")
+      .update({ 
+        website_status: websiteStatus,
+        website_url: websiteUrl 
+      })
+      .eq("id", userId!);
+
+    if (error) {
+      toast.error("Failed to update website details");
+    } else {
+      toast.success("Website details updated successfully");
       fetchUserData();
     }
   };
@@ -112,9 +134,21 @@ export default function AdminUserDetail() {
                     {user.subscription_status || "pending"}
                   </Badge>
                 </div>
-                <div>
+                <div className="col-span-2">
                   <Label>Website Status</Label>
-                  <p className="mt-1">{user.website_status || "pending"}</p>
+                  <div className="flex gap-2 mt-1">
+                    <Select value={websiteStatus} onValueChange={setWebsiteStatus}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pending">Pending</SelectItem>
+                        <SelectItem value="building">Building</SelectItem>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="live">Live</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <div>
                   <Label>Stripe Customer ID</Label>
@@ -124,20 +158,29 @@ export default function AdminUserDetail() {
                 </div>
               </div>
 
-              {user.website_url && (
-                <div>
-                  <Label>Website URL</Label>
-                  <div className="flex gap-2 mt-1">
-                    <Input value={user.website_url} readOnly />
+              <div>
+                <Label>Website URL</Label>
+                <div className="flex gap-2 mt-1">
+                  <Input 
+                    value={websiteUrl}
+                    onChange={(e) => setWebsiteUrl(e.target.value)}
+                    placeholder="e.g., https://yoursite.com or https://yoursite.bay.digital"
+                  />
+                  {websiteUrl && (
                     <Button
                       variant="outline"
-                      onClick={() => window.open(user.website_url!, "_blank")}
+                      onClick={() => window.open(websiteUrl, "_blank")}
                     >
                       Visit
                     </Button>
-                  </div>
+                  )}
                 </div>
-              )}
+              </div>
+
+              <Button onClick={saveWebsiteDetails} className="w-full">
+                <Save className="h-4 w-4 mr-2" />
+                Save Website Details
+              </Button>
             </CardContent>
           </Card>
 
