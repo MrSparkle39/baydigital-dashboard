@@ -10,6 +10,7 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Submissions from "./pages/Submissions";
+import ManageSites from "./pages/ManageSites";
 import Success from "./pages/Success";
 import NotFound from "./pages/NotFound";
 import AdminLayout from "./pages/admin/AdminLayout";
@@ -33,6 +34,7 @@ const App = () => (
             <Route path="/success" element={<Success />} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/submissions" element={<ProtectedRoute><Submissions /></ProtectedRoute>} />
+            <Route path="/manage-sites" element={<ProtectedRoute><ManageSites /></ProtectedRoute>} />
             <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
               <Route index element={<AdminUsers />} />
               <Route path="users" element={<AdminUsers />} />
