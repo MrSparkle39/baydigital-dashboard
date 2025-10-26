@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { ArrowLeft, Save } from "lucide-react";
 import { Database } from "@/integrations/supabase/types";
+import { AnalyticsViewer } from "@/components/admin/AnalyticsViewer";
 
 type User = Database["public"]["Tables"]["users"]["Row"];
 type Ticket = Database["public"]["Tables"]["update_tickets"]["Row"];
@@ -200,6 +201,13 @@ export default function AdminUserDetail() {
               )}
             </CardContent>
           </Card>
+
+          {user.ga4_property_id && (user.plan === 'professional' || user.plan === 'premium') && (
+            <AnalyticsViewer 
+              propertyId={user.ga4_property_id} 
+              userName={user.business_name || user.full_name || 'this user'}
+            />
+          )}
         </TabsContent>
 
         <TabsContent value="tickets" className="space-y-4">
