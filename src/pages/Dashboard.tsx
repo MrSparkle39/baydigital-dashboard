@@ -79,6 +79,8 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [userData, setUserData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [analyticsData, setAnalyticsData] = useState<any>(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -109,6 +111,11 @@ const Dashboard = () => {
         } else if (data) {
           setUserData(data);
           console.log("User data loaded:", data);
+          
+          // Fetch analytics if user has GA4 configured and is on pro/premium plan
+          if (data?.ga4_property_id && (data?.plan === 'professional' || data?.plan === 'premium')) {
+            fetchAnalytics(data.ga4_property_id);
+          }
         }
       } else {
         // Clear user data when user logs out
@@ -119,6 +126,29 @@ const Dashboard = () => {
 
     fetchUserData();
   }, [user, navigate]);
+
+  const fetchAnalytics = async (propertyId: string) => {
+    setAnalyticsLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('fetch-ga4-analytics', {
+        body: { 
+          propertyId,
+          startDate: '30daysAgo',
+          endDate: 'today'
+        }
+      });
+
+      if (error) {
+        console.error('Error fetching analytics:', error);
+      } else {
+        setAnalyticsData(data);
+      }
+    } catch (error) {
+      console.error('Error fetching analytics:', error);
+    } finally {
+      setAnalyticsLoading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -188,6 +218,11 @@ const Dashboard = () => {
           <AnalyticsCard
             plan={userPlan}
             ga4PropertyId={userData?.ga4_property_id}
+            visitors={analyticsData?.visitors}
+            pageViews={analyticsData?.pageViews}
+            topPages={analyticsData?.topPages}
+            trafficSources={analyticsData?.trafficSources}
+            loading={analyticsLoading}
           />
 
           <FormSubmissionsCard

@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.create-checkout]
 verify_jwt = false
+
+[functions.fetch-ga4-analytics]
+verify_jwt = true
