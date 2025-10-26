@@ -188,11 +188,6 @@ const ManageSites = () => {
     <div className="min-h-screen bg-background">
       <DashboardHeader />
       <main className="container mx-auto px-4 py-8">
-        <Button variant="ghost" onClick={() => navigate("/dashboard")} className="mb-6">
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Dashboard
-        </Button>
-        
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-3xl font-bold">Manage Sites</h2>

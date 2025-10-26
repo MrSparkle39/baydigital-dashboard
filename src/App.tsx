@@ -34,11 +34,11 @@ const App = () => (
             <Route path="/success" element={<Success />} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/submissions" element={<ProtectedRoute><Submissions /></ProtectedRoute>} />
-            <Route path="/manage-sites" element={<ProtectedRoute><ManageSites /></ProtectedRoute>} />
             <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
               <Route index element={<AdminUsers />} />
               <Route path="users" element={<AdminUsers />} />
               <Route path="users/:userId" element={<AdminUserDetail />} />
+              <Route path="sites" element={<ManageSites />} />
               <Route path="tickets" element={<AdminTickets />} />
               <Route path="analytics" element={<AdminAnalytics />} />
             </Route>

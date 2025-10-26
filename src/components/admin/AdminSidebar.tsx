@@ -1,4 +1,4 @@
-import { Users, FileText, TrendingUp, Settings } from "lucide-react";
+import { Users, FileText, TrendingUp, Settings, Globe } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import {
   Sidebar,
@@ -14,6 +14,7 @@ import {
 
 const items = [
   { title: "Users", url: "/admin/users", icon: Users },
+  { title: "Sites", url: "/admin/sites", icon: Globe },
   { title: "Tickets", url: "/admin/tickets", icon: FileText },
   { title: "Analytics", url: "/admin/analytics", icon: TrendingUp },
   { title: "Settings", url: "/admin/settings", icon: Settings },
