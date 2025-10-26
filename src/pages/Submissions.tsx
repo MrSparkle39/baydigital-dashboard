@@ -8,6 +8,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import type { Database } from "@/integrations/supabase/types";
+
+type SubmissionStatus = Database["public"]["Enums"]["submission_status"] | "contacted";
 
 interface Submission {
   id: string;
@@ -15,7 +18,7 @@ interface Submission {
   email: string;
   phone: string | null;
   message: string;
-  status: string;
+  status: SubmissionStatus;
   submitted_at: string;
 }
 
@@ -69,11 +72,11 @@ const Submissions = () => {
     }
   };
 
-  const updateStatus = async (id: string, newStatus: string) => {
+  const updateStatus = async (id: string, newStatus: SubmissionStatus) => {
     try {
       const { error } = await supabase
         .from('form_submissions')
-        .update({ status: newStatus })
+        .update({ status: newStatus as any })
         .eq('id', id);
 
       if (error) throw error;

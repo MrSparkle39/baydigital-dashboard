@@ -385,7 +385,7 @@ export type Database = {
       app_role: "admin" | "user"
       request_status: "pending" | "in_progress" | "completed"
       site_status: "live" | "building" | "maintenance"
-      submission_status: "new" | "read"
+      submission_status: "new" | "read" | "contacted"
       user_plan: "starter" | "professional" | "premium"
     }
     CompositeTypes: {
@@ -517,7 +517,7 @@ export const Constants = {
       app_role: ["admin", "user"],
       request_status: ["pending", "in_progress", "completed"],
       site_status: ["live", "building", "maintenance"],
-      submission_status: ["new", "read"],
+      submission_status: ["new", "read", "contacted"],
       user_plan: ["starter", "professional", "premium"],
     },
   },

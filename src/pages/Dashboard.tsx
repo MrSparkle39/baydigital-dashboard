@@ -81,6 +81,8 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [analyticsData, setAnalyticsData] = useState<any>(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [submissions, setSubmissions] = useState<any[]>([]);
+  const [submissionsLoading, setSubmissionsLoading] = useState(false);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -116,6 +118,11 @@ const Dashboard = () => {
           if (data?.ga4_property_id && (data?.plan === 'professional' || data?.plan === 'premium')) {
             fetchAnalytics(data.ga4_property_id);
           }
+          
+          // Fetch form submissions for professional and premium users
+          if (data?.plan === 'professional' || data?.plan === 'premium') {
+            fetchSubmissions();
+          }
         }
       } else {
         // Clear user data when user logs out
@@ -150,6 +157,42 @@ const Dashboard = () => {
     }
   };
 
+  const fetchSubmissions = async () => {
+    setSubmissionsLoading(true);
+    try {
+      // Get user's sites first
+      const { data: sites } = await supabase
+        .from('sites')
+        .select('id')
+        .eq('user_id', user?.id);
+
+      if (!sites || sites.length === 0) {
+        setSubmissions([]);
+        setSubmissionsLoading(false);
+        return;
+      }
+
+      const siteIds = sites.map(s => s.id);
+
+      // Fetch submissions for user's sites
+      const { data, error } = await supabase
+        .from('form_submissions')
+        .select('*')
+        .in('site_id', siteIds)
+        .order('submitted_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching submissions:', error);
+      } else {
+        setSubmissions(data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching submissions:', error);
+    } finally {
+      setSubmissionsLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -158,7 +201,7 @@ const Dashboard = () => {
     );
   }
 
-  const newSubmissionsCount = mockData.submissions.filter(s => s.status === "new").length;
+  const newSubmissionsCount = submissions.filter(s => s.status === "new").length;
   const userPlan = userData?.plan || "starter";
   const businessName = userData?.business_name || userData?.full_name || "there";
 
@@ -233,7 +276,7 @@ const Dashboard = () => {
 
           <FormSubmissionsCard
             plan={userPlan}
-            submissions={mockData.submissions}
+            submissions={submissions}
             newCount={newSubmissionsCount}
           />
 
