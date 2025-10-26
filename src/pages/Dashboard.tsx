@@ -187,7 +187,7 @@ const Dashboard = () => {
 
           <AnalyticsCard
             plan={userPlan}
-            {...mockData.analytics}
+            ga4PropertyId={userData?.ga4_property_id}
           />
 
           <FormSubmissionsCard

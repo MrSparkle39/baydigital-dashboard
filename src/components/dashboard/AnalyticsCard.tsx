@@ -5,6 +5,7 @@ import { Progress } from "@/components/ui/progress";
 
 interface AnalyticsCardProps {
   plan: string;
+  ga4PropertyId?: string | null;
   visitors?: number;
   visitorsGrowth?: number;
   pageViews?: number;
@@ -13,16 +14,19 @@ interface AnalyticsCardProps {
 }
 
 export const AnalyticsCard = ({ 
-  plan, 
+  plan,
+  ga4PropertyId,
   visitors = 0, 
   visitorsGrowth = 0,
   pageViews = 0,
   topPages = [],
   trafficSources = { google: 0, direct: 0, social: 0 }
 }: AnalyticsCardProps) => {
-  const hasAnalytics = plan === "professional" || plan === "premium";
+  const hasAnalyticsPlan = plan === "professional" || plan === "premium";
+  const isConfigured = hasAnalyticsPlan && ga4PropertyId;
 
-  if (!hasAnalytics) {
+  // Not on analytics plan
+  if (!hasAnalyticsPlan) {
     return (
       <Card className="hover:shadow-md transition-all">
         <CardHeader>
@@ -54,80 +58,63 @@ export const AnalyticsCard = ({
     );
   }
 
+  // On analytics plan but not configured yet
+  if (!isConfigured) {
+    return (
+      <Card className="hover:shadow-md transition-all">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <BarChart3 className="h-5 w-5" />
+            Site Analytics
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="text-center py-8 space-y-4">
+            <div className="mx-auto h-16 w-16 rounded-full bg-amber-500/10 flex items-center justify-center">
+              <BarChart3 className="h-8 w-8 text-amber-500" />
+            </div>
+            <div>
+              <h3 className="font-semibold">Analytics Setup Required</h3>
+              <p className="text-sm text-muted-foreground mt-2">
+                Your analytics are currently being set up by our team.
+              </p>
+              <p className="text-sm text-muted-foreground">
+                You'll receive an email once tracking is live and data starts flowing.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Analytics configured - show setup in progress message
   return (
     <Card className="hover:shadow-md transition-all">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <BarChart3 className="h-5 w-5" />
-          Site Analytics (Last {plan === "premium" ? "90" : "30"} Days)
+          Site Analytics
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Users className="h-4 w-4" />
-              Visitors
-            </div>
-            <div className="text-2xl font-bold">{visitors.toLocaleString()}</div>
-            <div className="flex items-center gap-1 text-xs text-success">
-              <TrendingUp className="h-3 w-3" />
-              +{visitorsGrowth}% from last month
-            </div>
+      <CardContent className="space-y-4">
+        <div className="text-center py-8 space-y-4">
+          <div className="mx-auto h-16 w-16 rounded-full bg-green-500/10 flex items-center justify-center">
+            <BarChart3 className="h-8 w-8 text-green-500" />
           </div>
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <FileText className="h-4 w-4" />
-              Page Views
-            </div>
-            <div className="text-2xl font-bold">{pageViews.toLocaleString()}</div>
+          <div>
+            <h3 className="font-semibold">Analytics Configured</h3>
+            <p className="text-sm text-muted-foreground mt-2">
+              Google Analytics is set up for your website.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Data collection is active and analytics will appear here once sufficient data is gathered.
+            </p>
+            <p className="text-xs text-muted-foreground mt-3">
+              Property ID: {ga4PropertyId}
+            </p>
           </div>
         </div>
-
-        <div className="space-y-3">
-          <div className="text-sm font-medium">Top Pages</div>
-          {topPages.map((page, index) => (
-            <div key={index} className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">
-                {index + 1}. {page.name}
-              </span>
-              <span className="font-medium">{page.views} views</span>
-            </div>
-          ))}
-        </div>
-
-        <div className="space-y-3">
-          <div className="text-sm font-medium">Traffic Sources</div>
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-sm">
-              <span className="flex items-center gap-2">
-                🔍 Google
-              </span>
-              <span className="font-medium">{trafficSources.google}%</span>
-            </div>
-            <Progress value={trafficSources.google} className="h-2" />
-            
-            <div className="flex items-center justify-between text-sm">
-              <span className="flex items-center gap-2">
-                🔗 Direct
-              </span>
-              <span className="font-medium">{trafficSources.direct}%</span>
-            </div>
-            <Progress value={trafficSources.direct} className="h-2" />
-            
-            <div className="flex items-center justify-between text-sm">
-              <span className="flex items-center gap-2">
-                📱 Social
-              </span>
-              <span className="font-medium">{trafficSources.social}%</span>
-            </div>
-            <Progress value={trafficSources.social} className="h-2" />
-          </div>
-        </div>
-
-        <Button variant="outline" className="w-full">
-          View Detailed Analytics →
-        </Button>
       </CardContent>
     </Card>
   );
