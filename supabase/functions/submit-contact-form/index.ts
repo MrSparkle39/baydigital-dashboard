@@ -10,6 +10,7 @@ interface ContactFormSubmission {
   site_id: string;
   name: string;
   email: string;
+  phone?: string;
   message: string;
 }
 
@@ -23,7 +24,7 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { site_id, name, email, message }: ContactFormSubmission = await req.json();
+    const { site_id, name, email, phone, message }: ContactFormSubmission = await req.json();
 
     // Validate inputs
     if (!site_id || !name || !email || !message) {
@@ -92,6 +93,7 @@ serve(async (req) => {
         site_id,
         name: name.trim(),
         email: email.trim().toLowerCase(),
+        phone: phone?.trim() || null,
         message: message.trim(),
         status: 'new'
       })

@@ -99,6 +99,7 @@ export type Database = {
           id: string
           message: string
           name: string
+          phone: string | null
           site_id: string
           status: Database["public"]["Enums"]["submission_status"] | null
           submitted_at: string | null
@@ -108,6 +109,7 @@ export type Database = {
           id?: string
           message: string
           name: string
+          phone?: string | null
           site_id: string
           status?: Database["public"]["Enums"]["submission_status"] | null
           submitted_at?: string | null
@@ -117,6 +119,7 @@ export type Database = {
           id?: string
           message?: string
           name?: string
+          phone?: string | null
           site_id?: string
           status?: Database["public"]["Enums"]["submission_status"] | null
           submitted_at?: string | null
