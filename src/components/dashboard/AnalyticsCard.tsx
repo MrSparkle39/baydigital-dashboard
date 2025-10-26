@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { BarChart3, TrendingUp, Users, FileText } from "lucide-react";
+import { BarChart3, TrendingUp, Users, FileText, Clock, Globe } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 
 interface AnalyticsCardProps {
@@ -10,9 +10,11 @@ interface AnalyticsCardProps {
   pageViews?: number;
   sessions?: number;
   engagementRate?: number;
+  avgSessionDuration?: number;
   topPages?: Array<{ page: string; views: number }>;
   trafficSources?: Array<{ source: string; visitors: number }>;
   devices?: Array<{ device: string; sessions: number }>;
+  topCountries?: Array<{ country: string; visitors: number }>;
   loading?: boolean;
 }
 
@@ -23,9 +25,11 @@ export const AnalyticsCard = ({
   pageViews = 0,
   sessions = 0,
   engagementRate = 0,
+  avgSessionDuration = 0,
   topPages = [],
   trafficSources = [],
   devices = [],
+  topCountries = [],
   loading = false
 }: AnalyticsCardProps) => {
   const hasAnalyticsPlan = plan === "professional" || plan === "premium";
@@ -152,11 +156,27 @@ export const AnalyticsCard = ({
               </div>
               <div className="bg-secondary/20 p-3 rounded-lg">
                 <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  Avg. Duration
+                </p>
+                <p className="text-xl font-bold mt-1">{Math.floor(avgSessionDuration / 60)}m {avgSessionDuration % 60}s</p>
+              </div>
+              <div className="bg-secondary/20 p-3 rounded-lg">
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
                   <TrendingUp className="h-3 w-3" />
                   Engagement
                 </p>
                 <p className="text-xl font-bold mt-1">{engagementRate.toFixed(1)}%</p>
               </div>
+              {topCountries.length > 0 && (
+                <div className="bg-secondary/20 p-3 rounded-lg">
+                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Globe className="h-3 w-3" />
+                    Top Location
+                  </p>
+                  <p className="text-xl font-bold mt-1">{topCountries[0].country}</p>
+                </div>
+              )}
             </div>
 
             {topPages.length > 0 && (
@@ -188,6 +208,9 @@ export const AnalyticsCard = ({
                   <TrendingUp className="h-4 w-4" />
                   Traffic Sources
                 </h4>
+                <p className="text-xs text-muted-foreground mb-2">
+                  "Direct" = typed URL/bookmarks. "(not set)" = unknown source.
+                </p>
                 <div className="space-y-2">
                   {trafficSources.slice(0, 3).map((source, index) => (
                     <div key={index} className="flex justify-between text-sm">
@@ -199,25 +222,44 @@ export const AnalyticsCard = ({
               </div>
             )}
             
-            {devices && devices.length > 0 && (
-              <div>
-                <h4 className="text-sm font-semibold mb-2">Device Breakdown</h4>
-                <div className="space-y-2">
-                  {devices.map((device, index) => (
-                    <div key={index} className="space-y-1">
-                      <div className="flex justify-between text-sm">
-                        <span className="capitalize">{device.device}</span>
-                        <span className="font-semibold">{device.sessions.toLocaleString()}</span>
+            <div className="grid md:grid-cols-2 gap-4">
+              {devices && devices.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-semibold mb-2">Device Breakdown</h4>
+                  <div className="space-y-2">
+                    {devices.map((device, index) => (
+                      <div key={index} className="space-y-1">
+                        <div className="flex justify-between text-sm">
+                          <span className="capitalize">{device.device}</span>
+                          <span className="font-semibold">{device.sessions.toLocaleString()}</span>
+                        </div>
+                        <Progress 
+                          value={(device.sessions / (sessions || 1)) * 100} 
+                          className="h-1.5"
+                        />
                       </div>
-                      <Progress 
-                        value={(device.sessions / (sessions || 1)) * 100} 
-                        className="h-1.5"
-                      />
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+              
+              {topCountries && topCountries.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                    <Globe className="h-4 w-4" />
+                    Top Countries
+                  </h4>
+                  <div className="space-y-2">
+                    {topCountries.slice(0, 5).map((country, index) => (
+                      <div key={index} className="flex justify-between text-sm">
+                        <span>{country.country}</span>
+                        <span className="font-semibold">{country.visitors.toLocaleString()}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </CardContent>

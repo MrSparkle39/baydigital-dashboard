@@ -220,8 +220,13 @@ const Dashboard = () => {
             ga4PropertyId={userData?.ga4_property_id}
             visitors={analyticsData?.visitors}
             pageViews={analyticsData?.pageViews}
+            sessions={analyticsData?.sessions}
+            engagementRate={analyticsData?.engagementRate}
+            avgSessionDuration={analyticsData?.avgSessionDuration}
             topPages={analyticsData?.topPages}
             trafficSources={analyticsData?.trafficSources}
+            devices={analyticsData?.devices}
+            topCountries={analyticsData?.topCountries}
             loading={analyticsLoading}
           />
 
