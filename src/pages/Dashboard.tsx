@@ -256,7 +256,9 @@ const Dashboard = () => {
             lastUpdated={userData?.updated_at ? new Date(userData.updated_at).toLocaleString('en-AU') : "N/A"}
           />
 
-          <QuickLinks />
+          <div className="order-last md:order-none">
+            <QuickLinks />
+          </div>
 
           <AnalyticsCard
             plan={userPlan}
