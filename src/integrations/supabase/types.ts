@@ -181,6 +181,7 @@ export type Database = {
           assigned_to: string | null
           completed_at: string | null
           description: string
+          file_urls: string[] | null
           id: string
           priority: string | null
           status: string | null
@@ -193,6 +194,7 @@ export type Database = {
           assigned_to?: string | null
           completed_at?: string | null
           description: string
+          file_urls?: string[] | null
           id?: string
           priority?: string | null
           status?: string | null
@@ -205,6 +207,7 @@ export type Database = {
           assigned_to?: string | null
           completed_at?: string | null
           description?: string
+          file_urls?: string[] | null
           id?: string
           priority?: string | null
           status?: string | null
