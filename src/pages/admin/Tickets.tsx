@@ -29,6 +29,7 @@ export default function AdminTickets() {
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [adminNotes, setAdminNotes] = useState("");
   const navigate = useNavigate();
+  const [filesDialogOpen, setFilesDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchTickets();
@@ -157,6 +158,38 @@ export default function AdminTickets() {
         </div>
       </div>
 
+      {/* Files Dialog */}
+      <Dialog open={filesDialogOpen} onOpenChange={setFilesDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Uploaded Files</DialogTitle>
+            <DialogDescription>
+              Files attached to: {selectedTicket?.title}
+            </DialogDescription>
+          </DialogHeader>
+          {selectedTicket?.file_urls && selectedTicket.file_urls.length > 0 ? (
+            <div className="space-y-2">
+              {selectedTicket.file_urls.map((url, idx) => {
+                const fileName = url.split("/").pop() || `attachment-${idx + 1}`;
+                return (
+                  <Button
+                    key={idx}
+                    variant="outline"
+                    onClick={() => downloadFile(url, fileName)}
+                    className="w-full justify-start"
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    {fileName}
+                  </Button>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-muted-foreground">No files uploaded for this ticket.</p>
+          )}
+        </DialogContent>
+      </Dialog>
+
       <div className="grid gap-4">
         {tickets.map((ticket) => (
           <Card
@@ -193,34 +226,24 @@ export default function AdminTickets() {
             <CardContent>
               <p className="text-sm text-muted-foreground">{ticket.description}</p>
 
-              {ticket.file_urls && ticket.file_urls.length > 0 && (
-                <div className="mt-3 space-y-2">
-                  {ticket.file_urls.map((url, idx) => {
-                    const fileName = url.split("/").pop() || `attachment-${idx + 1}`;
-                    return (
-                      <Button
-                        key={idx}
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          downloadFile(url, fileName);
-                        }}
-                        className="justify-start"
-                      >
-                        <Download className="h-4 w-4 mr-2" />
-                        {fileName}
-                      </Button>
-                    );
-                  })}
-                </div>
-              )}
-
               <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
                 <div>
                   <p>From: {ticket.users?.business_name || ticket.users?.email}</p>
                   <p>Submitted: {new Date(ticket.submitted_at!).toLocaleDateString()}</p>
                 </div>
+                {ticket.file_urls && ticket.file_urls.length > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedTicket(ticket);
+                      setFilesDialogOpen(true);
+                    }}
+                  >
+                    Uploaded Files ({ticket.file_urls.length})
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -283,6 +306,31 @@ export default function AdminTickets() {
                     );
                   })}
                 </div>
+              </div>
+            )}
+
+            {/* Admin Notes */}
+            <div>
+              <h4 className="font-semibold mb-2">Admin Notes</h4>
+              <Textarea
+                value={adminNotes}
+                onChange={(e) => setAdminNotes(e.target.value)}
+                placeholder="Add internal notes about this ticket..."
+                rows={4}
+              />
+            </div>
+
+            {/* Files Button */}
+            {selectedTicket?.file_urls && selectedTicket.file_urls.length > 0 && (
+              <div>
+                <Button
+                  variant="outline"
+                  onClick={() => setFilesDialogOpen(true)}
+                  className="w-full"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  View Uploaded Files ({selectedTicket.file_urls.length})
+                </Button>
               </div>
             )}
 
