@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { ArrowLeft, Save } from "lucide-react";
+import { ArrowLeft, Save, Download } from "lucide-react";
 import { Database } from "@/integrations/supabase/types";
 import { AnalyticsViewer } from "@/components/admin/AnalyticsViewer";
 import { UserSitesManager } from "@/components/admin/UserSitesManager";
@@ -80,6 +80,29 @@ export default function AdminUserDetail() {
     } else {
       toast.success("Website details updated successfully");
       fetchUserData();
+    }
+  };
+
+  const downloadFile = async (filePath: string, fileName: string) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from("ticket-attachments")
+        .download(filePath);
+
+      if (error) throw error;
+
+      // Create a download link
+      const url = window.URL.createObjectURL(data);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Error downloading file:", error);
+      toast.error("Failed to download file");
     }
   };
 
@@ -278,19 +301,23 @@ export default function AdminUserDetail() {
                   
                   {ticket.file_urls && ticket.file_urls.length > 0 && (
                     <div className="mt-3">
-                      <p className="text-sm font-medium mb-1">Attachments:</p>
-                      <div className="space-y-1">
-                        {ticket.file_urls.map((url, idx) => (
-                          <a
-                            key={idx}
-                            href={url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-sm text-primary hover:underline block"
-                          >
-                            📎 Attachment {idx + 1}
-                          </a>
-                        ))}
+                      <p className="text-sm font-medium mb-2">Attachments:</p>
+                      <div className="space-y-2">
+                        {ticket.file_urls.map((url, idx) => {
+                          const fileName = url.split("/").pop() || `attachment-${idx + 1}`;
+                          return (
+                            <Button
+                              key={idx}
+                              variant="outline"
+                              size="sm"
+                              onClick={() => downloadFile(url, fileName)}
+                              className="w-full justify-start"
+                            >
+                              <Download className="h-4 w-4 mr-2" />
+                              {fileName}
+                            </Button>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
