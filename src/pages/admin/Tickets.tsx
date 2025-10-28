@@ -30,6 +30,7 @@ export default function AdminTickets() {
   const [adminNotes, setAdminNotes] = useState("");
   const navigate = useNavigate();
   const [filesDialogOpen, setFilesDialogOpen] = useState(false);
+  const [ticketFiles, setTicketFiles] = useState<string[]>([]);
 
   useEffect(() => {
     fetchTickets();
@@ -115,6 +116,33 @@ export default function AdminTickets() {
       console.error("Error downloading file:", error);
       toast.error("Failed to download file");
     }
+};
+
+  const loadTicketFiles = async (ticket: Ticket) => {
+    try {
+      if (ticket.file_urls && ticket.file_urls.length > 0) {
+        setTicketFiles(ticket.file_urls);
+        return;
+      }
+      if (!ticket.user_id) {
+        setTicketFiles([]);
+        return;
+      }
+      const prefix = `${ticket.user_id}/${ticket.id}`;
+      const { data, error } = await supabase.storage
+        .from('ticket-attachments')
+        .list(prefix, { limit: 100 });
+      if (error) {
+        console.error('Error listing files:', error);
+        setTicketFiles([]);
+        return;
+      }
+      const paths = (data || []).map((f) => `${prefix}/${f.name}`);
+      setTicketFiles(paths);
+    } catch (err) {
+      console.error('Failed loading ticket files', err);
+      setTicketFiles([]);
+    }
   };
 
   const updateTicketStatus = async (ticketId: string, status: string) => {
@@ -159,7 +187,7 @@ export default function AdminTickets() {
       </div>
 
       {/* Files Dialog */}
-      <Dialog open={filesDialogOpen} onOpenChange={setFilesDialogOpen}>
+      <Dialog open={filesDialogOpen} onOpenChange={(open) => { setFilesDialogOpen(open); if (!open) setTicketFiles([]); }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Uploaded Files</DialogTitle>
@@ -167,9 +195,9 @@ export default function AdminTickets() {
               Files attached to: {selectedTicket?.title}
             </DialogDescription>
           </DialogHeader>
-          {selectedTicket?.file_urls && selectedTicket.file_urls.length > 0 ? (
+          {ticketFiles.length > 0 ? (
             <div className="space-y-2">
-              {selectedTicket.file_urls.map((url, idx) => {
+              {ticketFiles.map((url, idx) => {
                 const fileName = url.split("/").pop() || `attachment-${idx + 1}`;
                 return (
                   <Button
@@ -234,11 +262,12 @@ export default function AdminTickets() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedTicket(ticket);
-                    setFilesDialogOpen(true);
-                  }}
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      setSelectedTicket(ticket);
+                      await loadTicketFiles(ticket);
+                      setFilesDialogOpen(true);
+                    }}
                 >
                   Uploaded Files ({ticket.file_urls?.length ?? 0})
                 </Button>
@@ -322,11 +351,11 @@ export default function AdminTickets() {
             <div>
               <Button
                 variant="outline"
-                onClick={() => setFilesDialogOpen(true)}
+                onClick={async () => { if (selectedTicket) { await loadTicketFiles(selectedTicket); } setFilesDialogOpen(true); }}
                 className="w-full"
               >
                 <Download className="h-4 w-4 mr-2" />
-                View Uploaded Files ({selectedTicket?.file_urls?.length ?? 0})
+                View Uploaded Files ({selectedTicket?.file_urls?.length ?? ticketFiles.length ?? 0})
               </Button>
             </div>
 
