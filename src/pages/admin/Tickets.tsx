@@ -31,6 +31,7 @@ export default function AdminTickets() {
   const navigate = useNavigate();
   const [filesDialogOpen, setFilesDialogOpen] = useState(false);
   const [ticketFiles, setTicketFiles] = useState<string[]>([]);
+  const [fileCountMap, setFileCountMap] = useState<Record<string, number>>({});
 
   useEffect(() => {
     fetchTickets();
@@ -122,10 +123,12 @@ export default function AdminTickets() {
     try {
       if (ticket.file_urls && ticket.file_urls.length > 0) {
         setTicketFiles(ticket.file_urls);
+        setFileCountMap(prev => ({ ...prev, [ticket.id]: ticket.file_urls!.length }));
         return;
       }
       if (!ticket.user_id) {
         setTicketFiles([]);
+        setFileCountMap(prev => ({ ...prev, [ticket.id]: 0 }));
         return;
       }
       const prefix = `${ticket.user_id}/${ticket.id}`;
@@ -135,13 +138,16 @@ export default function AdminTickets() {
       if (error) {
         console.error('Error listing files:', error);
         setTicketFiles([]);
+        setFileCountMap(prev => ({ ...prev, [ticket.id]: 0 }));
         return;
       }
       const paths = (data || []).map((f) => `${prefix}/${f.name}`);
       setTicketFiles(paths);
+      setFileCountMap(prev => ({ ...prev, [ticket.id]: paths.length }));
     } catch (err) {
       console.error('Failed loading ticket files', err);
       setTicketFiles([]);
+      setFileCountMap(prev => ({ ...prev, [ticket.id]: 0 }));
     }
   };
 
@@ -269,7 +275,7 @@ export default function AdminTickets() {
                       setFilesDialogOpen(true);
                     }}
                 >
-                  Uploaded Files ({ticket.file_urls?.length ?? 0})
+                  Uploaded Files ({fileCountMap[ticket.id] ?? ticket.file_urls?.length ?? 0})
                 </Button>
               </div>
             </CardContent>
@@ -355,7 +361,7 @@ export default function AdminTickets() {
                 className="w-full"
               >
                 <Download className="h-4 w-4 mr-2" />
-                View Uploaded Files ({selectedTicket?.file_urls?.length ?? ticketFiles.length ?? 0})
+                View Uploaded Files ({selectedTicket ? (fileCountMap[selectedTicket.id] ?? selectedTicket.file_urls?.length ?? 0) : 0})
               </Button>
             </div>
 
