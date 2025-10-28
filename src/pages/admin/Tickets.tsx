@@ -396,11 +396,11 @@ export default function AdminTickets() {
                     Mark In Progress
                   </Button>
                 )}
-                {selectedTicket?.status !== "resolved" && (
+                {selectedTicket?.status !== "completed" && (
                   <Button
-                    onClick={() => updateTicketStatus(selectedTicket!.id, "resolved")}
+                    onClick={() => updateTicketStatus(selectedTicket!.id, "completed")}
                   >
-                    Mark Resolved
+                    Mark Completed
                   </Button>
                 )}
               </div>
