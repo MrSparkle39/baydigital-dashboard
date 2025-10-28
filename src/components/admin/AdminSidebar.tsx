@@ -1,5 +1,8 @@
 import { Users, FileText, TrendingUp, Settings } from "lucide-react";
 import { NavLink } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Badge } from "@/components/ui/badge";
 import {
   Sidebar,
   SidebarContent,
@@ -22,6 +25,40 @@ const items = [
 export function AdminSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
+  const [openTicketsCount, setOpenTicketsCount] = useState(0);
+
+  useEffect(() => {
+    fetchOpenTickets();
+    
+    // Subscribe to realtime updates
+    const channel = supabase
+      .channel('tickets-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'update_tickets'
+        },
+        () => {
+          fetchOpenTickets();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const fetchOpenTickets = async () => {
+    const { count } = await supabase
+      .from("update_tickets")
+      .select("*", { count: "exact", head: true })
+      .eq("status", "open");
+    
+    setOpenTicketsCount(count || 0);
+  };
 
   return (
     <Sidebar collapsible="icon">
@@ -43,6 +80,14 @@ export function AdminSidebar() {
                     >
                       <item.icon className="h-4 w-4" />
                       {!collapsed && <span>{item.title}</span>}
+                      {item.title === "Tickets" && openTicketsCount > 0 && (
+                        <Badge 
+                          variant="destructive" 
+                          className="ml-auto"
+                        >
+                          {openTicketsCount}
+                        </Badge>
+                      )}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

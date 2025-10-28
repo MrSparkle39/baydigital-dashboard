@@ -18,14 +18,12 @@ type User = Database["public"]["Tables"]["users"]["Row"];
 type Ticket = Database["public"]["Tables"]["update_tickets"]["Row"] & {
   file_urls?: string[];
 };
-type ChangeRequest = Database["public"]["Tables"]["change_requests"]["Row"];
 
 export default function AdminUserDetail() {
   const { userId } = useParams();
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
   const [tickets, setTickets] = useState<Ticket[]>([]);
-  const [changeRequests, setChangeRequests] = useState<ChangeRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [ga4PropertyId, setGa4PropertyId] = useState("");
   const [websiteStatus, setWebsiteStatus] = useState("");
@@ -38,10 +36,9 @@ export default function AdminUserDetail() {
   }, [userId]);
 
   const fetchUserData = async () => {
-    const [userResult, ticketsResult, changeRequestsResult] = await Promise.all([
+    const [userResult, ticketsResult] = await Promise.all([
       supabase.from("users").select("*").eq("id", userId!).single(),
       supabase.from("update_tickets").select("*").eq("user_id", userId!).order("submitted_at", { ascending: false }),
-      supabase.from("change_requests").select("*").eq("user_id", userId!).order("created_at", { ascending: false }),
     ]);
 
     if (userResult.data) {
@@ -51,7 +48,6 @@ export default function AdminUserDetail() {
       setWebsiteUrl(userResult.data.website_url || "");
     }
     if (ticketsResult.data) setTickets(ticketsResult.data);
-    if (changeRequestsResult.data) setChangeRequests(changeRequestsResult.data);
     setLoading(false);
   };
 
@@ -119,7 +115,6 @@ export default function AdminUserDetail() {
           <TabsTrigger value="sites">Sites</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
           <TabsTrigger value="tickets">Tickets ({tickets.length})</TabsTrigger>
-          <TabsTrigger value="requests">Change Requests ({changeRequests.length})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
@@ -305,33 +300,6 @@ export default function AdminUserDetail() {
                     <span>
                       Submitted: {new Date(ticket.submitted_at!).toLocaleDateString()}
                     </span>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
-          )}
-        </TabsContent>
-
-        <TabsContent value="requests" className="space-y-4">
-          {changeRequests.length === 0 ? (
-            <Card>
-              <CardContent className="py-8 text-center text-muted-foreground">
-                No change requests found
-              </CardContent>
-            </Card>
-          ) : (
-            changeRequests.map((request) => (
-              <Card key={request.id}>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg">Change Request</CardTitle>
-                    <Badge>{request.status}</Badge>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm">{request.description}</p>
-                  <div className="mt-4 text-sm text-muted-foreground">
-                    Submitted: {new Date(request.created_at!).toLocaleDateString()}
                   </div>
                 </CardContent>
               </Card>
