@@ -256,7 +256,7 @@ export const ChangeRequestModal = ({ open, onOpenChange, onTicketCreated }: Chan
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Request Site Update</DialogTitle>
           <DialogDescription>
@@ -268,51 +268,51 @@ export const ChangeRequestModal = ({ open, onOpenChange, onTicketCreated }: Chan
             )}
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="title">Title</Label>
-            <Input
-              id="title"
-              placeholder="Brief summary of the update..."
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="description">What would you like changed?</Label>
-            <Textarea
-              id="description"
-              placeholder="Describe the changes you'd like to make..."
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={6}
-              className="resize-none"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="file-upload">Upload files (optional)</Label>
+        <ScrollArea className="flex-1 -mx-6 px-6">
+          <form onSubmit={handleSubmit} className="space-y-4 pr-4">
             <div className="space-y-2">
-              <label htmlFor="file-upload" className="border-2 border-dashed rounded-lg p-6 text-center hover:border-primary/50 transition-colors cursor-pointer block">
-                <Paperclip className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                <p className="text-sm text-muted-foreground">
-                  Drop files or click to upload
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Max 100MB per file
-                </p>
-                <input
-                  id="file-upload"
-                  type="file"
-                  multiple
-                  onChange={handleFileChange}
-                  className="hidden"
-                  accept="image/*,.pdf,.doc,.docx,.txt"
-                />
-              </label>
-              
-              {files.length > 0 && (
-                <ScrollArea className="max-h-[200px] rounded-md border p-2">
-                  <div className="space-y-2">
+              <Label htmlFor="title">Title</Label>
+              <Input
+                id="title"
+                placeholder="Brief summary of the update..."
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="description">What would you like changed?</Label>
+              <Textarea
+                id="description"
+                placeholder="Describe the changes you'd like to make..."
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={6}
+                className="resize-none"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="file-upload">Upload files (optional)</Label>
+              <div className="space-y-2">
+                <label htmlFor="file-upload" className="border-2 border-dashed rounded-lg p-6 text-center hover:border-primary/50 transition-colors cursor-pointer block">
+                  <Paperclip className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                  <p className="text-sm text-muted-foreground">
+                    Drop files or click to upload
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Max 100MB per file
+                  </p>
+                  <input
+                    id="file-upload"
+                    type="file"
+                    multiple
+                    onChange={handleFileChange}
+                    className="hidden"
+                    accept="image/*,.pdf,.doc,.docx,.txt"
+                  />
+                </label>
+                
+                {files.length > 0 && (
+                  <div className="max-h-[150px] overflow-y-auto rounded-md border p-2 space-y-2">
                     {files.map((file, index) => (
                       <div key={index} className="flex items-center justify-between p-2 bg-muted rounded-lg">
                         <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -334,28 +334,29 @@ export const ChangeRequestModal = ({ open, onOpenChange, onTicketCreated }: Chan
                       </div>
                     ))}
                   </div>
-                </ScrollArea>
-              )}
+                )}
+              </div>
             </div>
-          </div>
-          <div className="flex gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              className="flex-1"
-              onClick={() => onOpenChange(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              className="flex-1 bg-gradient-to-r from-primary to-primary-dark"
-              disabled={loading || uploadProgress || (ticketsRemaining !== null && ticketsRemaining <= 0)}
-            >
-              {uploadProgress ? "Uploading files..." : loading ? "Submitting..." : "Submit Request"}
-            </Button>
-          </div>
-        </form>
+          </form>
+        </ScrollArea>
+        <div className="flex gap-3 pt-4 border-t">
+          <Button
+            type="button"
+            variant="outline"
+            className="flex-1"
+            onClick={() => onOpenChange(false)}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            className="flex-1 bg-gradient-to-r from-primary to-primary-dark"
+            disabled={loading || uploadProgress || (ticketsRemaining !== null && ticketsRemaining <= 0)}
+            onClick={handleSubmit}
+          >
+            {uploadProgress ? "Uploading files..." : loading ? "Submitting..." : "Submit Request"}
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   );
