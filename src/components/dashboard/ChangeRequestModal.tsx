@@ -82,36 +82,39 @@ export const ChangeRequestModal = ({ open, onOpenChange, onTicketCreated }: Chan
   const uploadFiles = async (ticketId: string): Promise<string[]> => {
     if (files.length === 0 || !user) return [];
 
-    const uploadedUrls: string[] = [];
+    const uploadedPaths: string[] = [];
     setUploadProgress(true);
 
-    for (const file of files) {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}/${ticketId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+    try {
+      for (const file of files) {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${user.id}/${ticketId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
 
-      const { data, error } = await supabase.storage
-        .from('ticket-attachments')
-        .upload(fileName, file, {
-          cacheControl: '3600',
-          upsert: false
-        });
+        const { data, error } = await supabase.storage
+          .from('ticket-attachments')
+          .upload(fileName, file, {
+            cacheControl: '3600',
+            upsert: false
+          });
 
-      if (error) {
-        console.error("Error uploading file:", error);
-        toast({
-          title: "Upload Error",
-          description: `Failed to upload ${file.name}`,
-          variant: "destructive",
-        });
-        continue;
+        if (error) {
+          console.error("Error uploading file:", error);
+          toast({
+            title: "Upload Error",
+            description: `Failed to upload ${file.name}`,
+            variant: "destructive",
+          });
+          continue;
+        }
+
+        // Store just the path
+        uploadedPaths.push(data.path);
       }
-
-      // Store the path (not public URL since bucket is private)
-      uploadedUrls.push(data.path);
+    } finally {
+      setUploadProgress(false);
     }
 
-    setUploadProgress(false);
-    return uploadedUrls;
+    return uploadedPaths;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -164,7 +167,7 @@ export const ChangeRequestModal = ({ open, onOpenChange, onTicketCreated }: Chan
         return;
       }
 
-      // Create the ticket first to get the ID
+      // Step 1: Create the ticket WITHOUT file_urls first
       const { data: newTicket, error: insertError } = await supabase
         .from("update_tickets")
         .insert({
@@ -177,24 +180,41 @@ export const ChangeRequestModal = ({ open, onOpenChange, onTicketCreated }: Chan
         .select("id")
         .single();
 
-      if (insertError || !newTicket) throw insertError;
+      if (insertError || !newTicket) {
+        throw insertError || new Error("Failed to create ticket");
+      }
 
-      // Upload files if any
-      const fileUrls = await uploadFiles(newTicket.id);
+      console.log("Ticket created with ID:", newTicket.id);
 
-      // Update ticket with file URLs if files were uploaded
-      if (fileUrls.length > 0) {
-        const { error: updateError } = await supabase
-          .from("update_tickets")
-          .update({ file_urls: fileUrls } as any)
-          .eq("id", newTicket.id);
+      // Step 2: Upload files if any exist
+      let fileUrls: string[] = [];
+      if (files.length > 0) {
+        console.log(`Uploading ${files.length} files...`);
+        fileUrls = await uploadFiles(newTicket.id);
+        console.log("Files uploaded, paths:", fileUrls);
 
-        if (updateError) {
-          console.error("Error updating ticket with file URLs:", updateError);
+        // Step 3: Update the ticket with file URLs
+        if (fileUrls.length > 0) {
+          const { error: updateError } = await supabase
+            .from("update_tickets")
+            .update({ file_urls: fileUrls })
+            .eq("id", newTicket.id);
+
+          if (updateError) {
+            console.error("Error updating ticket with file URLs:", updateError);
+            // Don't throw here - ticket was created successfully, just log the error
+            toast({
+              title: "Partial Success",
+              description: "Ticket created but there was an issue saving file attachments. Please contact support.",
+              variant: "destructive",
+            });
+          } else {
+            console.log("Ticket updated with file URLs successfully");
+          }
         }
       }
 
-      // Increment tickets used
+      // Step 4: Increment tickets used counter
       const { data: currentUser, error: fetchError } = await supabase
         .from("users")
         .select("tickets_used_this_period")
@@ -212,9 +232,10 @@ export const ChangeRequestModal = ({ open, onOpenChange, onTicketCreated }: Chan
 
       toast({
         title: "Success",
-        description: "Your update request has been submitted successfully.",
+        description: `Your update request has been submitted successfully${fileUrls.length > 0 ? ` with ${fileUrls.length} file(s)` : ""}.`,
       });
 
+      // Reset form
       setTitle("");
       setDescription("");
       setFiles([]);
