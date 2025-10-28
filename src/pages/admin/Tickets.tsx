@@ -77,11 +77,15 @@ export default function AdminTickets() {
 
   const downloadFile = async (filePath: string, fileName: string) => {
     try {
+      console.log("Attempting download for path:", filePath);
       const { data, error } = await supabase.storage
         .from("ticket-attachments")
         .download(filePath);
 
-      if (error) throw error;
+      if (error) {
+        console.error("Download error:", error);
+        throw error;
+      }
 
       // Create a download link
       const url = window.URL.createObjectURL(data);

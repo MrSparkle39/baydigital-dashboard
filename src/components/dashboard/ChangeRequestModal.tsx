@@ -106,12 +106,8 @@ export const ChangeRequestModal = ({ open, onOpenChange, onTicketCreated }: Chan
         continue;
       }
 
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('ticket-attachments')
-        .getPublicUrl(data.path);
-
-      uploadedUrls.push(publicUrl);
+      // Store the path (not public URL since bucket is private)
+      uploadedUrls.push(data.path);
     }
 
     setUploadProgress(false);
