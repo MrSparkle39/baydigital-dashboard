@@ -246,6 +246,7 @@ export type Database = {
       users: {
         Row: {
           additional_info: string | null
+          billing_period_start: string | null
           business_email: string | null
           business_name: string | null
           business_phone: string | null
@@ -266,12 +267,14 @@ export type Database = {
           subscription_end_date: string | null
           subscription_start_date: string | null
           subscription_status: string | null
+          tickets_used_this_period: number | null
           updated_at: string | null
           website_status: string | null
           website_url: string | null
         }
         Insert: {
           additional_info?: string | null
+          billing_period_start?: string | null
           business_email?: string | null
           business_name?: string | null
           business_phone?: string | null
@@ -292,12 +295,14 @@ export type Database = {
           subscription_end_date?: string | null
           subscription_start_date?: string | null
           subscription_status?: string | null
+          tickets_used_this_period?: number | null
           updated_at?: string | null
           website_status?: string | null
           website_url?: string | null
         }
         Update: {
           additional_info?: string | null
+          billing_period_start?: string | null
           business_email?: string | null
           business_name?: string | null
           business_phone?: string | null
@@ -318,6 +323,7 @@ export type Database = {
           subscription_end_date?: string | null
           subscription_start_date?: string | null
           subscription_status?: string | null
+          tickets_used_this_period?: number | null
           updated_at?: string | null
           website_status?: string | null
           website_url?: string | null
@@ -373,6 +379,12 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_create_ticket: { Args: { user_id: string }; Returns: boolean }
+      check_and_reset_tickets: { Args: { user_id: string }; Returns: undefined }
+      get_ticket_limit: {
+        Args: { user_plan: Database["public"]["Enums"]["user_plan"] }
+        Returns: number
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

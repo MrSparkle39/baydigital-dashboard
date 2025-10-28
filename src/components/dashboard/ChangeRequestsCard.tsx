@@ -2,29 +2,73 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Edit, Clock, CheckCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ChangeRequestModal } from "./ChangeRequestModal";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
-interface ChangeRequest {
+interface UpdateTicket {
   id: string;
+  title: string;
   description: string;
   status: string;
-  created_at: string;
-  completed_at?: string;
+  submitted_at: string;
 }
 
-interface ChangeRequestsCardProps {
-  requests?: ChangeRequest[];
-}
-
-export const ChangeRequestsCard = ({ requests = [] }: ChangeRequestsCardProps) => {
+export const ChangeRequestsCard = () => {
   const [modalOpen, setModalOpen] = useState(false);
-  const recentRequests = requests.slice(0, 2);
+  const [tickets, setTickets] = useState<UpdateTicket[]>([]);
+  const [ticketsRemaining, setTicketsRemaining] = useState<number | null>(null);
+  const { user } = useAuth();
+
+  useEffect(() => {
+    if (user) {
+      fetchTickets();
+      fetchTicketsRemaining();
+    }
+  }, [user]);
+
+  const fetchTickets = async () => {
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from("update_tickets")
+      .select("id, title, description, status, submitted_at")
+      .eq("user_id", user.id)
+      .order("submitted_at", { ascending: false })
+      .limit(2);
+
+    if (!error && data) {
+      setTickets(data);
+    }
+  };
+
+  const fetchTicketsRemaining = async () => {
+    if (!user) return;
+
+    const { data: userData, error } = await supabase
+      .from("users")
+      .select("plan, tickets_used_this_period")
+      .eq("id", user.id)
+      .single();
+
+    if (error || !userData) return;
+
+    const ticketLimit = userData.plan === "premium" ? 5 : 2;
+    const remaining = ticketLimit - (userData.tickets_used_this_period || 0);
+    setTicketsRemaining(remaining);
+  };
+
+  const handleTicketCreated = () => {
+    fetchTickets();
+    fetchTicketsRemaining();
+  };
 
   const statusIcons = {
-    pending: <Clock className="h-3 w-3" />,
+    open: <Clock className="h-3 w-3" />,
     in_progress: <Clock className="h-3 w-3" />,
     completed: <CheckCircle className="h-3 w-3" />,
+    closed: <CheckCircle className="h-3 w-3" />,
   };
 
   return (
@@ -39,36 +83,43 @@ export const ChangeRequestsCard = ({ requests = [] }: ChangeRequestsCardProps) =
         <CardContent className="space-y-4">
           <div className="text-sm text-muted-foreground">
             Need to update your site?
+            {ticketsRemaining !== null && (
+              <span className="block mt-1 font-medium text-foreground">
+                {ticketsRemaining} {ticketsRemaining === 1 ? "ticket" : "tickets"} remaining this month
+              </span>
+            )}
           </div>
 
           <Button
             className="w-full bg-gradient-to-r from-primary to-primary-dark"
             onClick={() => setModalOpen(true)}
+            disabled={ticketsRemaining !== null && ticketsRemaining <= 0}
           >
             Request Site Update →
           </Button>
 
-          {recentRequests.length > 0 && (
+          {tickets.length > 0 && (
             <div className="space-y-3 pt-2">
               <div className="text-sm font-medium">Recent Requests</div>
-              {recentRequests.map((request) => (
+              {tickets.map((ticket) => (
                 <div
-                  key={request.id}
+                  key={ticket.id}
                   className="flex items-center justify-between p-2 rounded-lg bg-muted/50"
                 >
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm truncate">{request.description.substring(0, 30)}...</p>
+                    <p className="text-sm truncate">{ticket.title.substring(0, 30)}...</p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {new Date(request.created_at).toLocaleDateString()}
+                      {new Date(ticket.submitted_at).toLocaleDateString()}
                     </p>
                   </div>
                   <Badge
-                    variant={request.status === "completed" ? "default" : "secondary"}
+                    variant={ticket.status === "completed" || ticket.status === "closed" ? "default" : "secondary"}
                     className="ml-2 flex items-center gap-1"
                   >
-                    {statusIcons[request.status as keyof typeof statusIcons]}
-                    {request.status === "in_progress" ? "In Progress" : 
-                     request.status === "completed" ? "Completed" : "Pending"}
+                    {statusIcons[ticket.status as keyof typeof statusIcons]}
+                    {ticket.status === "in_progress" ? "In Progress" : 
+                     ticket.status === "completed" ? "Completed" :
+                     ticket.status === "closed" ? "Closed" : "Open"}
                   </Badge>
                 </div>
               ))}
@@ -77,7 +128,11 @@ export const ChangeRequestsCard = ({ requests = [] }: ChangeRequestsCardProps) =
         </CardContent>
       </Card>
 
-      <ChangeRequestModal open={modalOpen} onOpenChange={setModalOpen} />
+      <ChangeRequestModal 
+        open={modalOpen} 
+        onOpenChange={setModalOpen}
+        onTicketCreated={handleTicketCreated}
+      />
     </>
   );
 };

@@ -282,7 +282,7 @@ const Dashboard = () => {
             newCount={newSubmissionsCount}
           />
 
-          <ChangeRequestsCard requests={mockData.changeRequests} />
+          <ChangeRequestsCard />
         </div>
       </main>
     </div>
