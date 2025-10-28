@@ -54,7 +54,7 @@ export const ChangeRequestsCard = () => {
 
     if (error || !userData) return;
 
-    const ticketLimit = userData.plan === "premium" ? 5 : 2;
+    const ticketLimit = userData.plan === "professional" || userData.plan === "premium" ? 5 : 2;
     const remaining = ticketLimit - (userData.tickets_used_this_period || 0);
     setTicketsRemaining(remaining);
   };
