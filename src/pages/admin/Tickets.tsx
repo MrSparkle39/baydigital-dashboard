@@ -5,8 +5,16 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { Database } from "@/integrations/supabase/types";
-import { Download } from "lucide-react";
+import { Download, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 
 type Ticket = Database["public"]["Tables"]["update_tickets"]["Row"] & {
   users: { business_name: string | null; email: string } | null;
@@ -18,6 +26,8 @@ const priorityOrder = { urgent: 0, high: 1, normal: 2, low: 3 };
 export default function AdminTickets() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+  const [adminNotes, setAdminNotes] = useState("");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -88,6 +98,30 @@ export default function AdminTickets() {
     }
   };
 
+  const updateTicketStatus = async (ticketId: string, status: string) => {
+    try {
+      const { error } = await supabase
+        .from("update_tickets")
+        .update({ status, admin_notes: adminNotes })
+        .eq("id", ticketId);
+
+      if (error) throw error;
+
+      toast.success(`Ticket marked as ${status}`);
+      setSelectedTicket(null);
+      setAdminNotes("");
+      fetchTickets();
+    } catch (error) {
+      console.error("Error updating ticket:", error);
+      toast.error("Failed to update ticket");
+    }
+  };
+
+  const openTicketDetails = (ticket: Ticket) => {
+    setSelectedTicket(ticket);
+    setAdminNotes(ticket.admin_notes || "");
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -109,15 +143,19 @@ export default function AdminTickets() {
         {tickets.map((ticket) => (
           <Card
             key={ticket.id}
-            className={`hover:shadow-md transition-shadow ${
+            className={`hover:shadow-md transition-shadow cursor-pointer ${
               ticket.status === "open" && ticket.priority === "urgent"
                 ? "border-destructive"
                 : ""
             }`}
+            onClick={() => openTicketDetails(ticket)}
           >
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle className="text-lg">{ticket.title}</CardTitle>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  {ticket.title}
+                  <ExternalLink className="h-4 w-4" />
+                </CardTitle>
                 <div className="flex gap-2">
                   <Badge
                     variant={
@@ -135,52 +173,123 @@ export default function AdminTickets() {
               </div>
             </CardHeader>
             <CardContent>
-              <p className="text-sm mb-4">{ticket.description}</p>
-              
-              {ticket.file_urls && ticket.file_urls.length > 0 && (
-                <div className="mb-4">
-                  <p className="text-sm font-medium mb-2">Attachments:</p>
-                  <div className="space-y-2">
-                    {ticket.file_urls.map((url, idx) => {
-                      const fileName = url.split("/").pop() || `attachment-${idx + 1}`;
-                      return (
-                        <Button
-                          key={idx}
-                          variant="outline"
-                          size="sm"
-                          onClick={() => downloadFile(url, fileName)}
-                          className="w-full justify-start"
-                        >
-                          <Download className="h-4 w-4 mr-2" />
-                          {fileName}
-                        </Button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-              
-              <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground line-clamp-2">{ticket.description}</p>
+              <div className="flex items-center justify-between mt-4">
                 <div className="text-sm text-muted-foreground">
-                  <p>
-                    From: {ticket.users?.business_name || ticket.users?.email}
-                  </p>
-                  <p>
-                    Submitted: {new Date(ticket.submitted_at!).toLocaleDateString()}
-                  </p>
+                  <p>From: {ticket.users?.business_name || ticket.users?.email}</p>
+                  <p>Submitted: {new Date(ticket.submitted_at!).toLocaleDateString()}</p>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => navigate(`/admin/users/${ticket.user_id}`)}
-                >
-                  View User
-                </Button>
+                {ticket.file_urls && ticket.file_urls.length > 0 && (
+                  <Badge variant="outline">{ticket.file_urls.length} file(s)</Badge>
+                )}
               </div>
             </CardContent>
           </Card>
         ))}
       </div>
+
+      {/* Ticket Details Dialog */}
+      <Dialog open={!!selectedTicket} onOpenChange={() => setSelectedTicket(null)}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {selectedTicket?.title}
+              <Badge
+                variant={
+                  selectedTicket?.priority === "urgent" || selectedTicket?.priority === "high"
+                    ? "destructive"
+                    : "secondary"
+                }
+              >
+                {selectedTicket?.priority}
+              </Badge>
+              <Badge variant={selectedTicket?.status === "open" ? "default" : "outline"}>
+                {selectedTicket?.status}
+              </Badge>
+            </DialogTitle>
+            <DialogDescription>
+              From: {selectedTicket?.users?.business_name || selectedTicket?.users?.email} | 
+              Submitted: {selectedTicket?.submitted_at && new Date(selectedTicket.submitted_at).toLocaleString()}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6">
+            {/* Description */}
+            <div>
+              <h4 className="font-semibold mb-2">Description</h4>
+              <p className="text-sm whitespace-pre-wrap">{selectedTicket?.description}</p>
+            </div>
+
+            {/* Attachments */}
+            {selectedTicket?.file_urls && selectedTicket.file_urls.length > 0 && (
+              <div>
+                <h4 className="font-semibold mb-2">Attachments ({selectedTicket.file_urls.length})</h4>
+                <div className="space-y-2">
+                  {selectedTicket.file_urls.map((url, idx) => {
+                    const fileName = url.split("/").pop() || `attachment-${idx + 1}`;
+                    return (
+                      <Button
+                        key={idx}
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          downloadFile(url, fileName);
+                        }}
+                        className="w-full justify-start"
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        {fileName}
+                      </Button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Admin Notes */}
+            <div>
+              <h4 className="font-semibold mb-2">Admin Notes</h4>
+              <Textarea
+                value={adminNotes}
+                onChange={(e) => setAdminNotes(e.target.value)}
+                placeholder="Add internal notes about this ticket..."
+                rows={4}
+              />
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-2 justify-between">
+              <Button
+                variant="outline"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate(`/admin/users/${selectedTicket?.user_id}`);
+                }}
+              >
+                View User Profile
+              </Button>
+              <div className="flex gap-2">
+                {selectedTicket?.status === "open" && (
+                  <Button
+                    variant="secondary"
+                    onClick={() => updateTicketStatus(selectedTicket.id, "in_progress")}
+                  >
+                    Mark In Progress
+                  </Button>
+                )}
+                {selectedTicket?.status !== "resolved" && (
+                  <Button
+                    onClick={() => updateTicketStatus(selectedTicket!.id, "resolved")}
+                  >
+                    Mark Resolved
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
