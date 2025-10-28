@@ -352,12 +352,33 @@ export default function AdminUserDetail() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-muted-foreground line-clamp-2">{ticket.description}</p>
+                  <p className="text-sm text-muted-foreground">{ticket.description}</p>
+
+                  {ticket.file_urls && ticket.file_urls.length > 0 && (
+                    <div className="mt-3 space-y-2">
+                      {ticket.file_urls.map((url, idx) => {
+                        const fileName = url.split("/").pop() || `attachment-${idx + 1}`;
+                        return (
+                          <Button
+                            key={idx}
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              downloadFile(url, fileName);
+                            }}
+                            className="justify-start"
+                          >
+                            <Download className="h-4 w-4 mr-2" />
+                            {fileName}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                  )}
+
                   <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
                     <span>Submitted: {new Date(ticket.submitted_at!).toLocaleDateString()}</span>
-                    {ticket.file_urls && ticket.file_urls.length > 0 && (
-                      <Badge variant="outline">{ticket.file_urls.length} file(s)</Badge>
-                    )}
                   </div>
                 </CardContent>
               </Card>

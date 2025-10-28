@@ -75,19 +75,33 @@ export default function AdminTickets() {
     setLoading(false);
   };
 
+  const getStoragePath = (filePath: string) => {
+    if (!filePath) return filePath;
+    if (filePath.startsWith("http")) {
+      const marker = "/ticket-attachments/";
+      const idx = filePath.indexOf(marker);
+      if (idx !== -1) return filePath.substring(idx + marker.length);
+    }
+    if (filePath.startsWith("ticket-attachments/")) {
+      return filePath.slice("ticket-attachments/".length);
+    }
+    return filePath;
+  };
+
   const downloadFile = async (filePath: string, fileName: string) => {
     try {
       console.log("Attempting download for path:", filePath);
+      const path = getStoragePath(filePath);
+      console.log("Normalized path:", path);
       const { data, error } = await supabase.storage
         .from("ticket-attachments")
-        .download(filePath);
+        .download(path);
 
       if (error) {
         console.error("Download error:", error);
         throw error;
       }
 
-      // Create a download link
       const url = window.URL.createObjectURL(data);
       const link = document.createElement("a");
       link.href = url;
@@ -177,15 +191,36 @@ export default function AdminTickets() {
               </div>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground line-clamp-2">{ticket.description}</p>
-              <div className="flex items-center justify-between mt-4">
-                <div className="text-sm text-muted-foreground">
+              <p className="text-sm text-muted-foreground">{ticket.description}</p>
+
+              {ticket.file_urls && ticket.file_urls.length > 0 && (
+                <div className="mt-3 space-y-2">
+                  {ticket.file_urls.map((url, idx) => {
+                    const fileName = url.split("/").pop() || `attachment-${idx + 1}`;
+                    return (
+                      <Button
+                        key={idx}
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          downloadFile(url, fileName);
+                        }}
+                        className="justify-start"
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        {fileName}
+                      </Button>
+                    );
+                  })}
+                </div>
+              )}
+
+              <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
+                <div>
                   <p>From: {ticket.users?.business_name || ticket.users?.email}</p>
                   <p>Submitted: {new Date(ticket.submitted_at!).toLocaleDateString()}</p>
                 </div>
-                {ticket.file_urls && ticket.file_urls.length > 0 && (
-                  <Badge variant="outline">{ticket.file_urls.length} file(s)</Badge>
-                )}
               </div>
             </CardContent>
           </Card>
