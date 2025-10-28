@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Paperclip } from "lucide-react";
+import { Paperclip, X } from "lucide-react";
 
 interface ChangeRequestModalProps {
   open: boolean;
@@ -26,8 +26,12 @@ export const ChangeRequestModal = ({ open, onOpenChange, onTicketCreated }: Chan
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
   const [ticketsRemaining, setTicketsRemaining] = useState<number | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
+  const [uploadProgress, setUploadProgress] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
+
+  const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB in bytes
 
   useEffect(() => {
     if (open && user) {
@@ -52,6 +56,66 @@ export const ChangeRequestModal = ({ open, onOpenChange, onTicketCreated }: Chan
     const ticketLimit = userData.plan === "premium" ? 5 : 2;
     const remaining = ticketLimit - (userData.tickets_used_this_period || 0);
     setTicketsRemaining(remaining);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = Array.from(e.target.files || []);
+    
+    // Check file sizes
+    const oversizedFiles = selectedFiles.filter(file => file.size > MAX_FILE_SIZE);
+    if (oversizedFiles.length > 0) {
+      toast({
+        title: "File too large",
+        description: `Some files exceed the 100MB limit: ${oversizedFiles.map(f => f.name).join(", ")}`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setFiles(prev => [...prev, ...selectedFiles]);
+  };
+
+  const removeFile = (index: number) => {
+    setFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const uploadFiles = async (ticketId: string): Promise<string[]> => {
+    if (files.length === 0 || !user) return [];
+
+    const uploadedUrls: string[] = [];
+    setUploadProgress(true);
+
+    for (const file of files) {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}/${ticketId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+      const { data, error } = await supabase.storage
+        .from('ticket-attachments')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (error) {
+        console.error("Error uploading file:", error);
+        toast({
+          title: "Upload Error",
+          description: `Failed to upload ${file.name}`,
+          variant: "destructive",
+        });
+        continue;
+      }
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('ticket-attachments')
+        .getPublicUrl(data.path);
+
+      uploadedUrls.push(publicUrl);
+    }
+
+    setUploadProgress(false);
+    return uploadedUrls;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -104,16 +168,35 @@ export const ChangeRequestModal = ({ open, onOpenChange, onTicketCreated }: Chan
         return;
       }
 
-      // Create the ticket
-      const { error: insertError } = await supabase.from("update_tickets").insert({
-        user_id: user.id,
-        title: title.trim(),
-        description: description.trim(),
-        status: "open",
-        priority: "normal",
-      });
+      // Create the ticket first to get the ID
+      const { data: newTicket, error: insertError } = await supabase
+        .from("update_tickets")
+        .insert({
+          user_id: user.id,
+          title: title.trim(),
+          description: description.trim(),
+          status: "open",
+          priority: "normal",
+        })
+        .select("id")
+        .single();
 
-      if (insertError) throw insertError;
+      if (insertError || !newTicket) throw insertError;
+
+      // Upload files if any
+      const fileUrls = await uploadFiles(newTicket.id);
+
+      // Update ticket with file URLs if files were uploaded
+      if (fileUrls.length > 0) {
+        const { error: updateError } = await supabase
+          .from("update_tickets")
+          .update({ file_urls: fileUrls } as any)
+          .eq("id", newTicket.id);
+
+        if (updateError) {
+          console.error("Error updating ticket with file URLs:", updateError);
+        }
+      }
 
       // Increment tickets used
       const { data: currentUser, error: fetchError } = await supabase
@@ -138,6 +221,7 @@ export const ChangeRequestModal = ({ open, onOpenChange, onTicketCreated }: Chan
 
       setTitle("");
       setDescription("");
+      setFiles([]);
       onOpenChange(false);
       onTicketCreated?.();
     } catch (error) {
@@ -188,15 +272,50 @@ export const ChangeRequestModal = ({ open, onOpenChange, onTicketCreated }: Chan
             />
           </div>
           <div className="space-y-2">
-            <Label>Upload files (optional)</Label>
-            <div className="border-2 border-dashed rounded-lg p-6 text-center hover:border-primary/50 transition-colors cursor-pointer">
-              <Paperclip className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-              <p className="text-sm text-muted-foreground">
-                Drop files or click to upload
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Coming soon
-              </p>
+            <Label htmlFor="file-upload">Upload files (optional)</Label>
+            <div className="space-y-2">
+              <label htmlFor="file-upload" className="border-2 border-dashed rounded-lg p-6 text-center hover:border-primary/50 transition-colors cursor-pointer block">
+                <Paperclip className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                <p className="text-sm text-muted-foreground">
+                  Drop files or click to upload
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Max 100MB per file
+                </p>
+                <input
+                  id="file-upload"
+                  type="file"
+                  multiple
+                  onChange={handleFileChange}
+                  className="hidden"
+                  accept="image/*,.pdf,.doc,.docx,.txt"
+                />
+              </label>
+              
+              {files.length > 0 && (
+                <div className="space-y-2">
+                  {files.map((file, index) => (
+                    <div key={index} className="flex items-center justify-between p-2 bg-muted rounded-lg">
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <Paperclip className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        <span className="text-sm truncate">{file.name}</span>
+                        <span className="text-xs text-muted-foreground flex-shrink-0">
+                          ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                        </span>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeFile(index)}
+                        className="flex-shrink-0"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
           <div className="flex gap-3">
@@ -211,9 +330,9 @@ export const ChangeRequestModal = ({ open, onOpenChange, onTicketCreated }: Chan
             <Button
               type="submit"
               className="flex-1 bg-gradient-to-r from-primary to-primary-dark"
-              disabled={loading || (ticketsRemaining !== null && ticketsRemaining <= 0)}
+              disabled={loading || uploadProgress || (ticketsRemaining !== null && ticketsRemaining <= 0)}
             >
-              {loading ? "Submitting..." : "Submit Request"}
+              {uploadProgress ? "Uploading files..." : loading ? "Submitting..." : "Submit Request"}
             </Button>
           </div>
         </form>

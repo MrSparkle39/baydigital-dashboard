@@ -8,6 +8,7 @@ import { Database } from "@/integrations/supabase/types";
 
 type Ticket = Database["public"]["Tables"]["update_tickets"]["Row"] & {
   users: { business_name: string | null; email: string } | null;
+  file_urls?: string[];
 };
 
 const priorityOrder = { urgent: 0, high: 1, normal: 2, low: 3 };
@@ -37,7 +38,7 @@ export default function AdminTickets() {
           priorityOrder[b.priority as keyof typeof priorityOrder]
         );
       });
-      setTickets(sorted);
+      setTickets(sorted as Ticket[]);
     }
     setLoading(false);
   };
@@ -90,6 +91,26 @@ export default function AdminTickets() {
             </CardHeader>
             <CardContent>
               <p className="text-sm mb-4">{ticket.description}</p>
+              
+              {ticket.file_urls && ticket.file_urls.length > 0 && (
+                <div className="mb-4">
+                  <p className="text-sm font-medium mb-2">Attachments:</p>
+                  <div className="space-y-1">
+                    {ticket.file_urls.map((url, idx) => (
+                      <a
+                        key={idx}
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-primary hover:underline block"
+                      >
+                        📎 Attachment {idx + 1}
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
               <div className="flex items-center justify-between">
                 <div className="text-sm text-muted-foreground">
                   <p>

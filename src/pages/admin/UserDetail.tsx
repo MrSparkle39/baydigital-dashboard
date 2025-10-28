@@ -15,7 +15,9 @@ import { AnalyticsViewer } from "@/components/admin/AnalyticsViewer";
 import { UserSitesManager } from "@/components/admin/UserSitesManager";
 
 type User = Database["public"]["Tables"]["users"]["Row"];
-type Ticket = Database["public"]["Tables"]["update_tickets"]["Row"];
+type Ticket = Database["public"]["Tables"]["update_tickets"]["Row"] & {
+  file_urls?: string[];
+};
 type ChangeRequest = Database["public"]["Tables"]["change_requests"]["Row"];
 
 export default function AdminUserDetail() {
@@ -278,6 +280,26 @@ export default function AdminUserDetail() {
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm">{ticket.description}</p>
+                  
+                  {ticket.file_urls && ticket.file_urls.length > 0 && (
+                    <div className="mt-3">
+                      <p className="text-sm font-medium mb-1">Attachments:</p>
+                      <div className="space-y-1">
+                        {ticket.file_urls.map((url, idx) => (
+                          <a
+                            key={idx}
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm text-primary hover:underline block"
+                          >
+                            📎 Attachment {idx + 1}
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
                   <div className="mt-4 flex gap-4 text-sm text-muted-foreground">
                     <span>Priority: {ticket.priority}</span>
                     <span>
