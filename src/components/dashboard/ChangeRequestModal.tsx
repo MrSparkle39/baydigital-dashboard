@@ -14,7 +14,6 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Paperclip, X } from "lucide-react";
-import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface ChangeRequestModalProps {
   open: boolean;
@@ -32,31 +31,17 @@ export const ChangeRequestModal = ({ open, onOpenChange, onTicketCreated }: Chan
   const { toast } = useToast();
   const { user } = useAuth();
 
-  // Reset the form when the modal closes
-  const resetForm = () => {
-    setTitle("");
-    setDescription("");
-    setFiles([]);
-    setUploadProgress(false);
-    setLoading(false);
-  };
-
-  const handleCancel = () => {
-    resetForm();
-    onOpenChange(false);
-  };
-
-  useEffect(() => {
-    if (!open) {
-      resetForm();
-    }
-  }, [open]);
-
   const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB in bytes
 
   useEffect(() => {
     if (open && user) {
       fetchTicketsRemaining();
+    }
+    // Reset form when dialog closes
+    if (!open) {
+      setTitle("");
+      setDescription("");
+      setFiles([]);
     }
   }, [open, user]);
 
@@ -94,8 +79,6 @@ export const ChangeRequestModal = ({ open, onOpenChange, onTicketCreated }: Chan
     }
 
     setFiles(prev => [...prev, ...selectedFiles]);
-    // Allow re-selecting the same file(s) by clearing the input value
-    e.currentTarget.value = "";
   };
 
   const removeFile = (index: number) => {
@@ -278,7 +261,7 @@ export const ChangeRequestModal = ({ open, onOpenChange, onTicketCreated }: Chan
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px] max-h-[85vh] flex flex-col">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Request Site Update</DialogTitle>
           <DialogDescription>
@@ -290,89 +273,80 @@ export const ChangeRequestModal = ({ open, onOpenChange, onTicketCreated }: Chan
             )}
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="flex flex-col h-full gap-4">
-          <div className="flex-1 overflow-y-auto space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="title">Title</Label>
+            <Input
+              id="title"
+              placeholder="Brief summary of the update..."
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="description">What would you like changed?</Label>
+            <Textarea
+              id="description"
+              placeholder="Describe the changes you'd like to make..."
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={6}
+              className="resize-none break-words"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="file-upload">Upload files (optional)</Label>
             <div className="space-y-2">
-              <Label htmlFor="title">Title</Label>
-              <Input
-                id="title"
-                placeholder="Brief summary of the update..."
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="description">What would you like changed?</Label>
-              <Textarea
-                id="description"
-                placeholder="Describe the changes you'd like to make..."
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={6}
-                className="resize-none"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="file-upload">Upload files (optional)</Label>
-              {files.length > 0 && (
-                <p className="text-xs text-muted-foreground">
-                  {files.length} file{files.length === 1 ? "" : "s"} selected
+              <label htmlFor="file-upload" className="flex flex-col items-center justify-center border-2 border-dashed border-input rounded-lg p-6 text-center hover:border-primary/50 transition-colors cursor-pointer">
+                <Paperclip className="h-8 w-8 text-muted-foreground mb-2" />
+                <p className="text-sm text-muted-foreground">
+                  Drop files or click to upload
                 </p>
-              )}
-              <div className="space-y-2">
-                <label htmlFor="file-upload" className="border-2 border-dashed rounded-lg p-6 text-center hover:border-primary/50 transition-colors cursor-pointer block">
-                  <Paperclip className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                  <p className="text-sm text-muted-foreground">
-                    Drop files or click to upload
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Max 100MB per file
-                  </p>
-                  <input
-                    id="file-upload"
-                    type="file"
-                    multiple
-                    onChange={handleFileChange}
-                    className="hidden"
-                    accept="image/*,.pdf,.doc,.docx,.txt"
-                  />
-                </label>
-                
-                {files.length > 0 && (
-                  <ScrollArea className="max-h-[200px] rounded-md border p-2">
-                    <div className="space-y-2">
-                      {files.map((file, index) => (
-                        <div key={index} className="flex items-center justify-between p-2 bg-muted rounded-lg">
-                          <div className="flex items-center gap-2 flex-1 min-w-0">
-                            <Paperclip className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                            <span className="text-sm truncate">{file.name}</span>
-                            <span className="text-xs text-muted-foreground flex-shrink-0">
-                              ({(file.size / 1024 / 1024).toFixed(2)} MB)
-                            </span>
-                          </div>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeFile(index)}
-                            className="flex-shrink-0"
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ))}
+                <p className="text-xs text-muted-foreground mt-1">
+                  Max 100MB per file
+                </p>
+                <input
+                  id="file-upload"
+                  type="file"
+                  multiple
+                  onChange={handleFileChange}
+                  className="hidden"
+                  accept="image/*,.pdf,.doc,.docx,.txt"
+                />
+              </label>
+              
+              {files.length > 0 && (
+                <div className="space-y-2 max-h-[200px] overflow-y-auto pr-2">
+                  {files.map((file, index) => (
+                    <div key={index} className="flex items-center justify-between p-2 bg-muted rounded-lg gap-2">
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <Paperclip className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        <span className="text-sm truncate" title={file.name}>{file.name}</span>
+                        <span className="text-xs text-muted-foreground flex-shrink-0 whitespace-nowrap">
+                          ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                        </span>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeFile(index)}
+                        className="flex-shrink-0 h-8 w-8 p-0"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
                     </div>
-                  </ScrollArea>
-                )}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
-          <div className="flex gap-3 pt-2 border-t">
+          <div className="flex gap-3">
             <Button
               type="button"
               variant="outline"
               className="flex-1"
-              onClick={handleCancel}
+              onClick={() => onOpenChange(false)}
             >
               Cancel
             </Button>
