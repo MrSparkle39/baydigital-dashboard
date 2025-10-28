@@ -13,6 +13,8 @@ import { ArrowLeft, Save, Download } from "lucide-react";
 import { Database } from "@/integrations/supabase/types";
 import { AnalyticsViewer } from "@/components/admin/AnalyticsViewer";
 import { UserSitesManager } from "@/components/admin/UserSitesManager";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 
 type User = Database["public"]["Tables"]["users"]["Row"];
 type Ticket = Database["public"]["Tables"]["update_tickets"]["Row"] & {
@@ -28,6 +30,8 @@ export default function AdminUserDetail() {
   const [ga4PropertyId, setGa4PropertyId] = useState("");
   const [websiteStatus, setWebsiteStatus] = useState("");
   const [websiteUrl, setWebsiteUrl] = useState("");
+  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+  const [adminNotes, setAdminNotes] = useState("");
 
   useEffect(() => {
     if (userId) {
@@ -83,15 +87,28 @@ export default function AdminUserDetail() {
     }
   };
 
+  const getStoragePath = (filePath: string) => {
+    if (!filePath) return filePath;
+    if (filePath.startsWith("http")) {
+      const marker = "/ticket-attachments/";
+      const idx = filePath.indexOf(marker);
+      if (idx !== -1) return filePath.substring(idx + marker.length);
+    }
+    if (filePath.startsWith("ticket-attachments/")) {
+      return filePath.slice("ticket-attachments/".length);
+    }
+    return filePath;
+  };
+
   const downloadFile = async (filePath: string, fileName: string) => {
     try {
+      const path = getStoragePath(filePath);
       const { data, error } = await supabase.storage
         .from("ticket-attachments")
-        .download(filePath);
+        .download(path);
 
       if (error) throw error;
 
-      // Create a download link
       const url = window.URL.createObjectURL(data);
       const link = document.createElement("a");
       link.href = url;
@@ -104,6 +121,30 @@ export default function AdminUserDetail() {
       console.error("Error downloading file:", error);
       toast.error("Failed to download file");
     }
+  };
+
+  const updateTicketStatus = async (ticketId: string, status: string) => {
+    try {
+      const { error } = await supabase
+        .from("update_tickets")
+        .update({ status, admin_notes: adminNotes })
+        .eq("id", ticketId);
+
+      if (error) throw error;
+
+      toast.success(`Ticket marked as ${status}`);
+      setSelectedTicket(null);
+      setAdminNotes("");
+      fetchUserData();
+    } catch (error) {
+      console.error("Error updating ticket:", error);
+      toast.error("Failed to update ticket");
+    }
+  };
+
+  const openTicketDetails = (ticket: Ticket) => {
+    setSelectedTicket(ticket);
+    setAdminNotes(ticket.admin_notes || "");
   };
 
   if (loading) {
@@ -289,49 +330,110 @@ export default function AdminUserDetail() {
             </Card>
           ) : (
             tickets.map((ticket) => (
-              <Card key={ticket.id}>
+              <Card
+                key={ticket.id}
+                className="hover:shadow-md transition-shadow cursor-pointer"
+                onClick={() => openTicketDetails(ticket)}
+              >
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-lg">{ticket.title}</CardTitle>
-                    <Badge>{ticket.status}</Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={ticket.priority === "urgent" || ticket.priority === "high" ? "destructive" : "secondary"}>
+                        {ticket.priority}
+                      </Badge>
+                      <Badge variant={ticket.status === "open" ? "default" : "outline"}>{ticket.status}</Badge>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm">{ticket.description}</p>
-                  
-                  {ticket.file_urls && ticket.file_urls.length > 0 && (
-                    <div className="mt-3">
-                      <p className="text-sm font-medium mb-2">Attachments:</p>
-                      <div className="space-y-2">
-                        {ticket.file_urls.map((url, idx) => {
-                          const fileName = url.split("/").pop() || `attachment-${idx + 1}`;
-                          return (
-                            <Button
-                              key={idx}
-                              variant="outline"
-                              size="sm"
-                              onClick={() => downloadFile(url, fileName)}
-                              className="w-full justify-start"
-                            >
-                              <Download className="h-4 w-4 mr-2" />
-                              {fileName}
-                            </Button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                  
-                  <div className="mt-4 flex gap-4 text-sm text-muted-foreground">
-                    <span>Priority: {ticket.priority}</span>
-                    <span>
-                      Submitted: {new Date(ticket.submitted_at!).toLocaleDateString()}
-                    </span>
+                  <p className="text-sm text-muted-foreground line-clamp-2">{ticket.description}</p>
+                  <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
+                    <span>Submitted: {new Date(ticket.submitted_at!).toLocaleDateString()}</span>
+                    {ticket.file_urls && ticket.file_urls.length > 0 && (
+                      <Badge variant="outline">{ticket.file_urls.length} file(s)</Badge>
+                    )}
                   </div>
                 </CardContent>
               </Card>
             ))
           )}
+
+          {/* Ticket Details Dialog */}
+          <Dialog open={!!selectedTicket} onOpenChange={() => setSelectedTicket(null)}>
+            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  {selectedTicket?.title}
+                  <Badge variant={selectedTicket?.priority === "urgent" || selectedTicket?.priority === "high" ? "destructive" : "secondary"}>
+                    {selectedTicket?.priority}
+                  </Badge>
+                  <Badge variant={selectedTicket?.status === "open" ? "default" : "outline"}>
+                    {selectedTicket?.status}
+                  </Badge>
+                </DialogTitle>
+                <DialogDescription>
+                  Submitted: {selectedTicket?.submitted_at && new Date(selectedTicket.submitted_at).toLocaleString()}
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-6">
+                <div>
+                  <h4 className="font-semibold mb-2">Description</h4>
+                  <p className="text-sm whitespace-pre-wrap">{selectedTicket?.description}</p>
+                </div>
+
+                {selectedTicket?.file_urls && selectedTicket.file_urls.length > 0 && (
+                  <div>
+                    <h4 className="font-semibold mb-2">Attachments ({selectedTicket.file_urls.length})</h4>
+                    <div className="space-y-2">
+                      {selectedTicket.file_urls.map((url, idx) => {
+                        const fileName = url.split("/").pop() || `attachment-${idx + 1}`;
+                        return (
+                          <Button
+                            key={idx}
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              downloadFile(url, fileName);
+                            }}
+                            className="w-full justify-start"
+                          >
+                            <Download className="h-4 w-4 mr-2" />
+                            {fileName}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <h4 className="font-semibold mb-2">Admin Notes</h4>
+                  <Textarea
+                    value={adminNotes}
+                    onChange={(e) => setAdminNotes(e.target.value)}
+                    placeholder="Add internal notes about this ticket..."
+                    rows={4}
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2">
+                  {selectedTicket?.status === "open" && (
+                    <Button variant="secondary" onClick={() => updateTicketStatus(selectedTicket.id, "in_progress")}>
+                      Mark In Progress
+                    </Button>
+                  )}
+                  {selectedTicket?.status !== "resolved" && (
+                    <Button onClick={() => updateTicketStatus(selectedTicket!.id, "resolved")}>
+                      Mark Resolved
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
         </TabsContent>
       </Tabs>
     </div>
