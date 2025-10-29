@@ -23,8 +23,8 @@ const items = [
 ];
 
 export function AdminSidebar() {
-  const { state } = useSidebar();
-  const collapsed = state === "collapsed";
+  const { state, isMobile } = useSidebar();
+  const collapsed = state === "collapsed" && !isMobile;
   const [openTicketsCount, setOpenTicketsCount] = useState(0);
 
   useEffect(() => {
