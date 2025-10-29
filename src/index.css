@@ -64,6 +64,16 @@ All colors MUST be HSL.
 
     /* Transitions */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* Sidebar theme (used by shadcn Sidebar). All values are HSL numbers. */
+    --sidebar-background: 0 0% 100%;            /* solid white so content behind isn't visible */
+    --sidebar-foreground: 222 47% 11%;
+    --sidebar-primary: 252 71% 67%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 252 20% 96%;
+    --sidebar-accent-foreground: 222 47% 11%;
+    --sidebar-border: 252 20% 90%;
+    --sidebar-ring: 252 71% 67%;
   }
 }
 
