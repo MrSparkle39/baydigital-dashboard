@@ -223,7 +223,7 @@ export const ChangeRequestModal = ({ open, onOpenChange, onTicketCreated }: Chan
       // Step 4: Increment tickets used counter
       const { data: currentUser, error: fetchError } = await supabase
         .from("users")
-        .select("tickets_used_this_period")
+        .select("tickets_used_this_period, email, business_name")
         .eq("id", user.id)
         .single();
 
@@ -235,6 +235,42 @@ export const ChangeRequestModal = ({ open, onOpenChange, onTicketCreated }: Chan
         .eq("id", user.id);
 
       if (incrementError) throw incrementError;
+
+      // Step 5: Send email notifications
+      try {
+        // Send confirmation email to user
+        await supabase.functions.invoke('send-email', {
+          body: {
+            type: 'ticket_confirmation',
+            to: currentUser.email,
+            data: {
+              ticketTitle: title.trim(),
+              ticketId: newTicket.id,
+            },
+          },
+        });
+
+        // Send notification email to admin
+        await supabase.functions.invoke('send-email', {
+          body: {
+            type: 'admin_notification',
+            to: 'support@bay.digital',
+            data: {
+              ticketTitle: title.trim(),
+              ticketDescription: description.trim(),
+              userName: currentUser.business_name || 'N/A',
+              userEmail: currentUser.email,
+              ticketId: newTicket.id,
+              priority: 'normal',
+            },
+          },
+        });
+
+        console.log('Email notifications sent successfully');
+      } catch (emailError) {
+        console.error('Error sending email notifications:', emailError);
+        // Don't fail the ticket creation if email fails
+      }
 
       toast({
         title: "Success",

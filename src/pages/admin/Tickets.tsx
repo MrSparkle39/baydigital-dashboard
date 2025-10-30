@@ -160,6 +160,27 @@ export default function AdminTickets() {
 
       if (error) throw error;
 
+      // Send email notification to user when status changes
+      if (selectedTicket?.users?.email && (status === 'in_progress' || status === 'completed')) {
+        try {
+          await supabase.functions.invoke('send-email', {
+            body: {
+              type: 'ticket_update',
+              to: selectedTicket.users.email,
+              data: {
+                ticketTitle: selectedTicket.title,
+                status,
+                adminNotes: adminNotes,
+              },
+            },
+          });
+          console.log('Email notification sent to user');
+        } catch (emailError) {
+          console.error('Error sending email notification:', emailError);
+          // Don't fail the status update if email fails
+        }
+      }
+
       toast.success(`Ticket marked as ${status}`);
       setSelectedTicket(null);
       setAdminNotes("");
