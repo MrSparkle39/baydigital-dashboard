@@ -7,6 +7,7 @@ import { ChangeRequestModal } from "./ChangeRequestModal";
 import { TicketDetailDialog } from "./TicketDetailDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 interface UpdateTicket {
   id: string;
@@ -16,6 +17,7 @@ interface UpdateTicket {
   submitted_at: string;
   priority?: string;
   file_urls?: string[];
+  last_message_at?: string;
 }
 
 export const ChangeRequestsCard = () => {
@@ -24,6 +26,7 @@ export const ChangeRequestsCard = () => {
   const [tickets, setTickets] = useState<UpdateTicket[]>([]);
   const [ticketsRemaining, setTicketsRemaining] = useState<number | null>(null);
   const [messageCounts, setMessageCounts] = useState<Record<string, number>>({});
+  const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
   const { user } = useAuth();
 
   useEffect(() => {
@@ -33,20 +36,54 @@ export const ChangeRequestsCard = () => {
     }
   }, [user]);
 
+  // Subscribe to realtime updates for new messages
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel('ticket-messages-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'ticket_messages',
+        },
+        (payload) => {
+          // Refetch tickets to get updated counts
+          fetchTickets();
+          
+          // Show toast notification if message is for one of user's tickets
+          const ticketIds = tickets.map(t => t.id);
+          if (ticketIds.includes(payload.new.ticket_id)) {
+            toast.info("💬 New message received on your ticket!");
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, tickets]);
+
   const fetchTickets = async () => {
     if (!user) return;
 
     const { data, error } = await supabase
       .from("update_tickets")
-      .select("id, title, description, status, submitted_at, priority, file_urls")
+      .select("id, title, description, status, submitted_at, priority, file_urls, last_message_at")
       .eq("user_id", user.id)
       .order("submitted_at", { ascending: false })
-      .limit(5); // Show more tickets
+      .limit(5);
 
     if (!error && data) {
       setTickets(data);
-      // Fetch message counts for each ticket
-      data.forEach(ticket => fetchMessageCount(ticket.id));
+      // Fetch message counts and unread counts for each ticket
+      data.forEach(ticket => {
+        fetchMessageCount(ticket.id);
+        fetchUnreadCount(ticket.id);
+      });
     }
   };
 
@@ -58,6 +95,29 @@ export const ChangeRequestsCard = () => {
 
     if (!error && count !== null) {
       setMessageCounts(prev => ({ ...prev, [ticketId]: count }));
+    }
+  };
+
+  const fetchUnreadCount = async (ticketId: string) => {
+    if (!user) return;
+
+    // Get last read time for this ticket
+    const { data: readData } = await supabase
+      .from("ticket_message_reads")
+      .select("last_read_at")
+      .eq("ticket_id", ticketId)
+      .eq("user_id", user.id)
+      .single();
+
+    // Count messages created after last read time
+    const { count } = await supabase
+      .from("ticket_messages")
+      .select("*", { count: 'exact', head: true })
+      .eq("ticket_id", ticketId)
+      .gt("created_at", readData?.last_read_at || "1970-01-01");
+
+    if (count !== null) {
+      setUnreadCounts(prev => ({ ...prev, [ticketId]: count }));
     }
   };
 
@@ -133,7 +193,9 @@ export const ChangeRequestsCard = () => {
               </div>
               {tickets.map((ticket) => {
                 const messageCount = messageCounts[ticket.id] || 0;
+                const unreadCount = unreadCounts[ticket.id] || 0;
                 const isActive = ticket.status === "open" || ticket.status === "in_progress";
+                const hasUnread = unreadCount > 0;
                 
                 return (
                   <div
@@ -144,15 +206,22 @@ export const ChangeRequestsCard = () => {
                       ${isActive 
                         ? 'bg-primary/10 hover:bg-primary/20 border border-primary/30' 
                         : 'bg-muted/50 hover:bg-muted border border-transparent'}
+                      ${hasUnread ? 'ring-2 ring-destructive/50' : ''}
                     `}
                     onClick={() => setSelectedTicket(ticket)}
                   >
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <p className="text-sm font-medium truncate">
                           {ticket.title.length > 35 ? ticket.title.substring(0, 35) + '...' : ticket.title}
                         </p>
-                        {messageCount > 0 && (
+                        {hasUnread && (
+                          <div className="flex items-center gap-1 text-xs bg-destructive text-destructive-foreground px-2 py-0.5 rounded-full animate-pulse">
+                            <MessageCircle className="h-3 w-3" />
+                            {unreadCount} new
+                          </div>
+                        )}
+                        {messageCount > 0 && !hasUnread && (
                           <div className="flex items-center gap-1 text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded-full">
                             <MessageCircle className="h-3 w-3" />
                             {messageCount}
@@ -161,6 +230,7 @@ export const ChangeRequestsCard = () => {
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">
                         {new Date(ticket.submitted_at).toLocaleDateString()}
+                        {hasUnread && <span className="ml-2 text-destructive font-semibold">• New Message!</span>}
                       </p>
                     </div>
                     <Badge

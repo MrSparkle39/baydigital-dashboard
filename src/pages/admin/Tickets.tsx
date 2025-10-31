@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { Database } from "@/integrations/supabase/types";
-import { Download, ExternalLink } from "lucide-react";
+import { Download, ExternalLink, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -33,6 +33,17 @@ export default function AdminTickets() {
   const [filesDialogOpen, setFilesDialogOpen] = useState(false);
   const [ticketFiles, setTicketFiles] = useState<string[]>([]);
   const [fileCountMap, setFileCountMap] = useState<Record<string, number>>({});
+  const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
+  const [adminUserId, setAdminUserId] = useState<string | null>(null);
+
+  // Get current admin user ID
+  useEffect(() => {
+    const getAdminUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) setAdminUserId(user.id);
+    };
+    getAdminUser();
+  }, []);
 
   useEffect(() => {
     fetchTickets();
@@ -49,6 +60,21 @@ export default function AdminTickets() {
         },
         () => {
           fetchTickets();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'ticket_messages'
+        },
+        (payload) => {
+          // Show notification if user replied to a ticket
+          if (!payload.new.is_admin) {
+            toast.info("💬 New reply from user!");
+            fetchTickets();
+          }
         }
       )
       .subscribe();
@@ -75,8 +101,37 @@ export default function AdminTickets() {
         );
       });
       setTickets(sorted as Ticket[]);
+      
+      // Fetch unread counts for each ticket
+      if (adminUserId) {
+        sorted.forEach(ticket => fetchUnreadCount(ticket.id));
+      }
     }
     setLoading(false);
+  };
+
+  const fetchUnreadCount = async (ticketId: string) => {
+    if (!adminUserId) return;
+
+    // Get last read time for this ticket by admin
+    const { data: readData } = await supabase
+      .from("ticket_message_reads")
+      .select("last_read_at")
+      .eq("ticket_id", ticketId)
+      .eq("user_id", adminUserId)
+      .single();
+
+    // Count user messages (is_admin = false) created after last read time
+    const { count } = await supabase
+      .from("ticket_messages")
+      .select("*", { count: 'exact', head: true })
+      .eq("ticket_id", ticketId)
+      .eq("is_admin", false)
+      .gt("created_at", readData?.last_read_at || "1970-01-01");
+
+    if (count !== null) {
+      setUnreadCounts(prev => ({ ...prev, [ticketId]: count }));
+    }
   };
 
   const getStoragePath = (filePath: string) => {
@@ -192,9 +247,29 @@ export default function AdminTickets() {
     }
   };
 
-  const openTicketDetails = (ticket: Ticket) => {
+  const openTicketDetails = async (ticket: Ticket) => {
     setSelectedTicket(ticket);
     setAdminNotes(ticket.admin_notes || "");
+    
+    // Mark messages as read when admin opens ticket
+    if (adminUserId) {
+      try {
+        await supabase
+          .from("ticket_message_reads")
+          .upsert({
+            ticket_id: ticket.id,
+            user_id: adminUserId,
+            last_read_at: new Date().toISOString(),
+          }, {
+            onConflict: 'ticket_id,user_id'
+          });
+        
+        // Reset unread count for this ticket
+        setUnreadCounts(prev => ({ ...prev, [ticket.id]: 0 }));
+      } catch (error) {
+        console.error("Error marking messages as read:", error);
+      }
+    }
   };
 
   if (loading) {
@@ -247,62 +322,76 @@ export default function AdminTickets() {
       </Dialog>
 
       <div className="grid gap-4">
-        {tickets.map((ticket) => (
-          <Card
-            key={ticket.id}
-            className={`hover:shadow-md transition-shadow cursor-pointer ${
-              ticket.status === "open" && ticket.priority === "urgent"
-                ? "border-destructive"
-                : ""
-            }`}
-            onClick={() => openTicketDetails(ticket)}
-          >
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  {ticket.title}
-                  <ExternalLink className="h-4 w-4" />
-                </CardTitle>
-                <div className="flex gap-2">
-                  <Badge
-                    variant={
-                      ticket.priority === "urgent" || ticket.priority === "high"
-                        ? "destructive"
-                        : "secondary"
-                    }
-                  >
-                    {ticket.priority}
-                  </Badge>
-                  <Badge variant={ticket.status === "open" ? "default" : "outline"}>
-                    {ticket.status}
-                  </Badge>
+        {tickets.map((ticket) => {
+          const unreadCount = unreadCounts[ticket.id] || 0;
+          const hasUnread = unreadCount > 0;
+          
+          return (
+            <Card
+              key={ticket.id}
+              className={`hover:shadow-md transition-shadow cursor-pointer ${
+                ticket.status === "open" && ticket.priority === "urgent"
+                  ? "border-destructive"
+                  : ""
+              } ${hasUnread ? "ring-2 ring-destructive/50" : ""}`}
+              onClick={() => openTicketDetails(ticket)}
+            >
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    {ticket.title}
+                    <ExternalLink className="h-4 w-4" />
+                    {hasUnread && (
+                      <Badge variant="destructive" className="animate-pulse">
+                        <MessageCircle className="h-3 w-3 mr-1" />
+                        {unreadCount} new
+                      </Badge>
+                    )}
+                  </CardTitle>
+                  <div className="flex gap-2">
+                    <Badge
+                      variant={
+                        ticket.priority === "urgent" || ticket.priority === "high"
+                          ? "destructive"
+                          : "secondary"
+                      }
+                    >
+                      {ticket.priority}
+                    </Badge>
+                    <Badge variant={ticket.status === "open" ? "default" : "outline"}>
+                      {ticket.status}
+                    </Badge>
+                  </div>
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">{ticket.description}</p>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">{ticket.description}</p>
 
-              <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
-                <div>
-                  <p>From: {ticket.users?.business_name || ticket.users?.email}</p>
-                  <p>Submitted: {new Date(ticket.submitted_at!).toLocaleDateString()}</p>
+                <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
+                  <div>
+                    <p>From: {ticket.users?.business_name || ticket.users?.email}</p>
+                    <p>Submitted: {new Date(ticket.submitted_at!).toLocaleDateString()}</p>
+                    {hasUnread && (
+                      <p className="text-destructive font-semibold mt-1">• New replies from user!</p>
+                    )}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        setSelectedTicket(ticket);
+                        await loadTicketFiles(ticket);
+                        setFilesDialogOpen(true);
+                      }}
+                  >
+                    Uploaded Files ({fileCountMap[ticket.id] ?? ticket.file_urls?.length ?? 0})
+                  </Button>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                    onClick={async (e) => {
-                      e.stopPropagation();
-                      setSelectedTicket(ticket);
-                      await loadTicketFiles(ticket);
-                      setFilesDialogOpen(true);
-                    }}
-                >
-                  Uploaded Files ({fileCountMap[ticket.id] ?? ticket.file_urls?.length ?? 0})
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
       {/* Ticket Details Dialog */}

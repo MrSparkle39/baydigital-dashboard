@@ -75,7 +75,7 @@ export const TicketMessaging = ({ ticketId, ticketTitle, ticketUserEmail, isAdmi
 
     setSending(true);
     try {
-      // Save message to database
+      // Save message to database - trigger will handle email notification
       const { error } = await supabase
         .from("ticket_messages")
         .insert({
@@ -87,39 +87,6 @@ export const TicketMessaging = ({ ticketId, ticketTitle, ticketUserEmail, isAdmi
 
       if (error) throw error;
 
-      // Send email notification
-      try {
-        if (isAdmin && ticketUserEmail) {
-          // Admin replied - notify user
-          await supabase.functions.invoke('send-email', {
-            body: {
-              type: 'ticket_reply',
-              to: ticketUserEmail,
-              data: {
-                ticketTitle: ticketTitle,
-                message: newMessage.trim(),
-              },
-            },
-          });
-        } else if (!isAdmin) {
-          // User replied - notify admin
-          await supabase.functions.invoke('send-email', {
-            body: {
-              type: 'ticket_reply_admin',
-              to: 'support@bay.digital',
-              data: {
-                ticketTitle: ticketTitle,
-                message: newMessage.trim(),
-                userName: user.email,
-              },
-            },
-          });
-        }
-      } catch (emailError) {
-        console.error('Error sending email notification:', emailError);
-        // Don't fail the message if email fails
-      }
-
       setNewMessage("");
       toast.success("Message sent");
     } catch (error) {
@@ -129,6 +96,29 @@ export const TicketMessaging = ({ ticketId, ticketTitle, ticketUserEmail, isAdmi
       setSending(false);
     }
   };
+
+  // Mark messages as read when component loads or messages change
+  useEffect(() => {
+    const markAsRead = async () => {
+      if (!user || messages.length === 0) return;
+
+      try {
+        await supabase
+          .from("ticket_message_reads")
+          .upsert({
+            ticket_id: ticketId,
+            user_id: user.id,
+            last_read_at: new Date().toISOString(),
+          }, {
+            onConflict: 'ticket_id,user_id'
+          });
+      } catch (error) {
+        console.error("Error marking messages as read:", error);
+      }
+    };
+
+    markAsRead();
+  }, [ticketId, user, messages.length]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
