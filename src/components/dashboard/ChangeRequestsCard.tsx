@@ -109,11 +109,13 @@ export const ChangeRequestsCard = () => {
       .eq("user_id", user.id)
       .single();
 
-    // Count messages created after last read time
+    // CRITICAL FIX: Only count messages from OTHER people (not current user)
+    // This prevents users from seeing notifications for their own messages
     const { count } = await supabase
       .from("ticket_messages")
       .select("*", { count: 'exact', head: true })
       .eq("ticket_id", ticketId)
+      .neq("user_id", user.id)  // ⬅️ KEY FIX: Exclude own messages
       .gt("created_at", readData?.last_read_at || "1970-01-01");
 
     if (count !== null) {
