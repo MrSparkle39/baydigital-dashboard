@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ChevronDown, User, Settings, LogOut } from "lucide-react";
 import logo from "@/assets/logo.png";
+import { NotificationBell } from "@/components/NotificationBell";
 
 export const DashboardHeader = () => {
   const { user, signOut } = useAuth();
@@ -17,7 +18,10 @@ export const DashboardHeader = () => {
       <div className="container mx-auto px-4 py-4 flex items-center justify-between">
         <img src={logo} alt="Bay Digital" className="h-32" />
 
-        <DropdownMenu>
+        <div className="flex items-center gap-2">
+          <NotificationBell />
+          
+          <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="gap-2">
               <span className="text-sm font-medium">{user?.email}</span>
@@ -39,6 +43,7 @@ export const DashboardHeader = () => {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        </div>
       </div>
     </header>
   );

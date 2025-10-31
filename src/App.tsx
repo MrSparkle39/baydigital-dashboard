@@ -11,12 +11,16 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Submissions from "./pages/Submissions";
 import Success from "./pages/Success";
+import SignupSuccess from "./pages/SignupSuccess";
+import Notifications from "./pages/Notifications";
 import NotFound from "./pages/NotFound";
 import AdminLayout from "./pages/admin/AdminLayout";
+import AdminOverview from "./pages/admin/Overview";
 import AdminUsers from "./pages/admin/Users";
 import AdminUserDetail from "./pages/admin/UserDetail";
 import AdminTickets from "./pages/admin/Tickets";
 import AdminAnalytics from "./pages/admin/Analytics";
+import AdminNotifications from "./pages/admin/Notifications";
 
 const queryClient = new QueryClient();
 
@@ -31,14 +35,17 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
             <Route path="/success" element={<Success />} />
+            <Route path="/signup-success" element={<SignupSuccess />} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/submissions" element={<ProtectedRoute><Submissions /></ProtectedRoute>} />
+            <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
             <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
-              <Route index element={<AdminUsers />} />
+              <Route index element={<AdminOverview />} />
               <Route path="users" element={<AdminUsers />} />
               <Route path="users/:userId" element={<AdminUserDetail />} />
               <Route path="tickets" element={<AdminTickets />} />
               <Route path="analytics" element={<AdminAnalytics />} />
+              <Route path="notifications" element={<AdminNotifications />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

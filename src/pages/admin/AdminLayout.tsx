@@ -6,6 +6,7 @@ import { LogOut } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffect } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { NotificationBell } from "@/components/NotificationBell";
 
 function AdminLayoutContent() {
   const { signOut } = useAuth();
@@ -29,10 +30,13 @@ function AdminLayoutContent() {
             <SidebarTrigger />
             <h1 className="text-lg font-semibold">Admin Dashboard</h1>
           </div>
-          <Button variant="outline" size="sm" onClick={signOut}>
-            <LogOut className="h-4 w-4 mr-2" />
-            Logout
-          </Button>
+          <div className="flex items-center gap-2">
+            <NotificationBell />
+            <Button variant="outline" size="sm" onClick={signOut}>
+              <LogOut className="h-4 w-4 mr-2" />
+              Logout
+            </Button>
+          </div>
         </header>
         <main className="flex-1 p-6">
           <Outlet />
