@@ -366,7 +366,12 @@ export default function AdminTickets() {
 
             {/* Messaging Thread */}
             {selectedTicket && (
-              <TicketMessaging ticketId={selectedTicket.id} isAdmin={true} />
+              <TicketMessaging 
+                ticketId={selectedTicket.id}
+                ticketTitle={selectedTicket.title}
+                ticketUserEmail={selectedTicket.users?.email}
+                isAdmin={true}
+              />
             )}
 
             {/* Files Button */}

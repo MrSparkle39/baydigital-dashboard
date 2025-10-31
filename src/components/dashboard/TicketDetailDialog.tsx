@@ -121,7 +121,11 @@ export const TicketDetailDialog = ({ ticket, open, onOpenChange }: TicketDetailD
           )}
 
           {/* Messaging Thread */}
-          <TicketMessaging ticketId={ticket.id} isAdmin={false} />
+          <TicketMessaging 
+            ticketId={ticket.id}
+            ticketTitle={ticket.title}
+            isAdmin={false}
+          />
         </div>
       </DialogContent>
     </Dialog>

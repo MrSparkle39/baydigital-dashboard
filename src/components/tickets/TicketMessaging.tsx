@@ -13,10 +13,12 @@ type TicketMessage = Database["public"]["Tables"]["ticket_messages"]["Row"] & {
 
 interface TicketMessagingProps {
   ticketId: string;
+  ticketTitle: string;
+  ticketUserEmail?: string;
   isAdmin?: boolean;
 }
 
-export const TicketMessaging = ({ ticketId, isAdmin = false }: TicketMessagingProps) => {
+export const TicketMessaging = ({ ticketId, ticketTitle, ticketUserEmail, isAdmin = false }: TicketMessagingProps) => {
   const [messages, setMessages] = useState<TicketMessage[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [sending, setSending] = useState(false);
@@ -73,6 +75,7 @@ export const TicketMessaging = ({ ticketId, isAdmin = false }: TicketMessagingPr
 
     setSending(true);
     try {
+      // Save message to database
       const { error } = await supabase
         .from("ticket_messages")
         .insert({
@@ -83,6 +86,39 @@ export const TicketMessaging = ({ ticketId, isAdmin = false }: TicketMessagingPr
         });
 
       if (error) throw error;
+
+      // Send email notification
+      try {
+        if (isAdmin && ticketUserEmail) {
+          // Admin replied - notify user
+          await supabase.functions.invoke('send-email', {
+            body: {
+              type: 'ticket_reply',
+              to: ticketUserEmail,
+              data: {
+                ticketTitle: ticketTitle,
+                message: newMessage.trim(),
+              },
+            },
+          });
+        } else if (!isAdmin) {
+          // User replied - notify admin
+          await supabase.functions.invoke('send-email', {
+            body: {
+              type: 'ticket_reply_admin',
+              to: 'support@bay.digital',
+              data: {
+                ticketTitle: ticketTitle,
+                message: newMessage.trim(),
+                userName: user.email,
+              },
+            },
+          });
+        }
+      } catch (emailError) {
+        console.error('Error sending email notification:', emailError);
+        // Don't fail the message if email fails
+      }
 
       setNewMessage("");
       toast.success("Message sent");
@@ -103,14 +139,24 @@ export const TicketMessaging = ({ ticketId, isAdmin = false }: TicketMessagingPr
 
   return (
     <div className="space-y-4">
-      <h4 className="font-semibold">Conversation</h4>
+      <div className="flex items-center justify-between">
+        <h4 className="font-semibold">Messages</h4>
+        <span className="text-xs text-muted-foreground">
+          {messages.length} {messages.length === 1 ? 'message' : 'messages'}
+        </span>
+      </div>
       
       {/* Messages Thread */}
       <div className="border rounded-lg p-4 space-y-3 max-h-[400px] overflow-y-auto bg-muted/20">
         {messages.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-8">
-            No messages yet. Start the conversation!
-          </p>
+          <div className="text-center py-8">
+            <p className="text-sm text-muted-foreground mb-2">
+              💬 No messages yet
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {isAdmin ? "Send a message to the user below" : "Ask questions or provide additional details below"}
+            </p>
+          </div>
         ) : (
           messages.map((message) => {
             const isAdminMessage = message.is_admin;
@@ -151,22 +197,28 @@ export const TicketMessaging = ({ ticketId, isAdmin = false }: TicketMessagingPr
       </div>
 
       {/* Message Input */}
-      <div className="flex gap-2">
+      <div className="space-y-2">
         <Textarea
           value={newMessage}
           onChange={(e) => setNewMessage(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Type your message... (Press Enter to send, Shift+Enter for new line)"
+          placeholder={isAdmin ? "Reply to the user..." : "Ask a question or provide more details..."}
           rows={3}
-          className="flex-1"
+          className="w-full"
         />
-        <Button
-          onClick={sendMessage}
-          disabled={!newMessage.trim() || sending}
-          className="self-end"
-        >
-          <Send className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-muted-foreground">
+            Press Enter to send, Shift+Enter for new line
+          </span>
+          <Button
+            onClick={sendMessage}
+            disabled={!newMessage.trim() || sending}
+            size="sm"
+          >
+            <Send className="h-4 w-4 mr-2" />
+            {sending ? "Sending..." : "Send Message"}
+          </Button>
+        </div>
       </div>
     </div>
   );

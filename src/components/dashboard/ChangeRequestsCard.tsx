@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Edit, Clock, CheckCircle, ExternalLink } from "lucide-react";
+import { Edit, Clock, CheckCircle, MessageCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useState, useEffect } from "react";
 import { ChangeRequestModal } from "./ChangeRequestModal";
@@ -23,6 +23,7 @@ export const ChangeRequestsCard = () => {
   const [selectedTicket, setSelectedTicket] = useState<UpdateTicket | null>(null);
   const [tickets, setTickets] = useState<UpdateTicket[]>([]);
   const [ticketsRemaining, setTicketsRemaining] = useState<number | null>(null);
+  const [messageCounts, setMessageCounts] = useState<Record<string, number>>({});
   const { user } = useAuth();
 
   useEffect(() => {
@@ -40,10 +41,23 @@ export const ChangeRequestsCard = () => {
       .select("id, title, description, status, submitted_at, priority, file_urls")
       .eq("user_id", user.id)
       .order("submitted_at", { ascending: false })
-      .limit(2);
+      .limit(5); // Show more tickets
 
     if (!error && data) {
       setTickets(data);
+      // Fetch message counts for each ticket
+      data.forEach(ticket => fetchMessageCount(ticket.id));
+    }
+  };
+
+  const fetchMessageCount = async (ticketId: string) => {
+    const { count, error } = await supabase
+      .from("ticket_messages")
+      .select("*", { count: 'exact', head: true })
+      .eq("ticket_id", ticketId);
+
+    if (!error && count !== null) {
+      setMessageCounts(prev => ({ ...prev, [ticketId]: count }));
     }
   };
 
@@ -75,6 +89,13 @@ export const ChangeRequestsCard = () => {
     closed: <CheckCircle className="h-3 w-3" />,
   };
 
+  const statusLabels = {
+    open: "Open",
+    in_progress: "In Progress",
+    completed: "Completed",
+    closed: "Closed",
+  };
+
   return (
     <>
       <Card className="hover:shadow-md transition-all">
@@ -104,33 +125,60 @@ export const ChangeRequestsCard = () => {
 
           {tickets.length > 0 && (
             <div className="space-y-3 pt-2">
-              <div className="text-sm font-medium">Recent Requests</div>
-              {tickets.map((ticket) => (
-                <div
-                  key={ticket.id}
-                  className="flex items-center justify-between p-2 rounded-lg bg-muted/50 cursor-pointer hover:bg-muted transition-colors"
-                  onClick={() => setSelectedTicket(ticket)}
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm truncate flex items-center gap-1">
-                      {ticket.title.substring(0, 30)}...
-                      <ExternalLink className="h-3 w-3" />
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {new Date(ticket.submitted_at).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <Badge
-                    variant={ticket.status === "completed" || ticket.status === "closed" ? "default" : "secondary"}
-                    className="ml-2 flex items-center gap-1"
-                  >
-                    {statusIcons[ticket.status as keyof typeof statusIcons]}
-                    {ticket.status === "in_progress" ? "In Progress" : 
-                     ticket.status === "completed" ? "Completed" :
-                     ticket.status === "closed" ? "Closed" : "Open"}
-                  </Badge>
+              <div className="flex items-center justify-between">
+                <div className="text-sm font-medium">Your Requests</div>
+                <div className="text-xs text-muted-foreground">
+                  Click to view & message
                 </div>
-              ))}
+              </div>
+              {tickets.map((ticket) => {
+                const messageCount = messageCounts[ticket.id] || 0;
+                const isActive = ticket.status === "open" || ticket.status === "in_progress";
+                
+                return (
+                  <div
+                    key={ticket.id}
+                    className={`
+                      flex items-center justify-between p-3 rounded-lg 
+                      cursor-pointer transition-all
+                      ${isActive 
+                        ? 'bg-primary/10 hover:bg-primary/20 border border-primary/30' 
+                        : 'bg-muted/50 hover:bg-muted border border-transparent'}
+                    `}
+                    onClick={() => setSelectedTicket(ticket)}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium truncate">
+                          {ticket.title.length > 35 ? ticket.title.substring(0, 35) + '...' : ticket.title}
+                        </p>
+                        {messageCount > 0 && (
+                          <div className="flex items-center gap-1 text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded-full">
+                            <MessageCircle className="h-3 w-3" />
+                            {messageCount}
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {new Date(ticket.submitted_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <Badge
+                      variant={isActive ? "default" : "secondary"}
+                      className="ml-2 flex items-center gap-1"
+                    >
+                      {statusIcons[ticket.status as keyof typeof statusIcons]}
+                      {statusLabels[ticket.status as keyof typeof statusLabels]}
+                    </Badge>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {tickets.length === 0 && (
+            <div className="text-center py-6 text-sm text-muted-foreground">
+              No requests yet. Click above to submit your first update request!
             </div>
           )}
         </CardContent>

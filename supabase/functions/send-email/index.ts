@@ -8,7 +8,7 @@ const corsHeaders = {
 };
 
 interface EmailRequest {
-  type: 'ticket_confirmation' | 'admin_notification' | 'ticket_update' | 'welcome';
+  type: 'ticket_confirmation' | 'admin_notification' | 'ticket_update' | 'welcome' | 'ticket_reply' | 'ticket_reply_admin';
   to: string;
   data: {
     ticketTitle?: string;
@@ -20,6 +20,7 @@ interface EmailRequest {
     status?: string;
     adminNotes?: string;
     dashboardUrl?: string;
+    message?: string;
   };
 }
 
@@ -430,6 +431,55 @@ serve(async (req) => {
           data.status!,
           data.adminNotes || ''
         );
+        break;
+
+      case 'ticket_reply':
+        subject = `New message on your request: ${data.ticketTitle}`;
+        html = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 20px; text-align: center;">
+              <h1 style="color: white; margin: 0;">💬 New Message</h1>
+            </div>
+            <div style="padding: 40px 30px; background: #f9f9f9;">
+              <p>Hi there,</p>
+              <p>The Bay Digital team has replied to your request: <strong>${data.ticketTitle}</strong></p>
+              <div style="background: white; padding: 20px; border-left: 4px solid #667eea; margin: 20px 0;">
+                <p style="white-space: pre-wrap;">${data.message!.substring(0, 200)}${data.message!.length > 200 ? '...' : ''}</p>
+              </div>
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="https://dashboard.bay.digital" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: 600;">
+                  View & Reply in Dashboard →
+                </a>
+              </div>
+              <p>Best regards,<br><strong>The Bay Digital Team</strong></p>
+            </div>
+          </div>
+        `;
+        break;
+
+      case 'ticket_reply_admin':
+        subject = `Client replied: ${data.ticketTitle}`;
+        html = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background: #1a1a1a; padding: 30px 20px; text-align: center;">
+              <h1 style="color: white; margin: 0;">💬 Client Reply</h1>
+            </div>
+            <div style="padding: 30px; background: #f9f9f9;">
+              <div style="background: white; padding: 20px; border-left: 4px solid #667eea; margin-bottom: 20px;">
+                <h2 style="margin: 0 0 10px 0;">${data.ticketTitle}</h2>
+                <p style="margin: 0; color: #999;">From: ${data.userName}</p>
+              </div>
+              <div style="background: white; padding: 20px; margin-bottom: 20px;">
+                <p style="white-space: pre-wrap;">${data.message}</p>
+              </div>
+              <div style="text-align: center;">
+                <a href="https://dashboard.bay.digital/admin/tickets" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: 600;">
+                  Reply in Dashboard →
+                </a>
+              </div>
+            </div>
+          </div>
+        `;
         break;
 
       default:
