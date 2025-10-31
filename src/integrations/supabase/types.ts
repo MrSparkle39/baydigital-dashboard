@@ -175,6 +175,35 @@ export type Database = {
           },
         ]
       }
+      ticket_message_reads: {
+        Row: {
+          id: string
+          last_read_at: string
+          ticket_id: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          last_read_at?: string
+          ticket_id: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          last_read_at?: string
+          ticket_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_message_reads_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "update_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ticket_messages: {
         Row: {
           created_at: string
@@ -225,6 +254,7 @@ export type Database = {
           description: string
           file_urls: string[] | null
           id: string
+          last_message_at: string | null
           priority: string | null
           status: string | null
           submitted_at: string | null
@@ -238,6 +268,7 @@ export type Database = {
           description: string
           file_urls?: string[] | null
           id?: string
+          last_message_at?: string | null
           priority?: string | null
           status?: string | null
           submitted_at?: string | null
@@ -251,6 +282,7 @@ export type Database = {
           description?: string
           file_urls?: string[] | null
           id?: string
+          last_message_at?: string | null
           priority?: string | null
           status?: string | null
           submitted_at?: string | null
