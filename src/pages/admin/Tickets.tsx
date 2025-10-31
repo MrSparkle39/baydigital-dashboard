@@ -36,19 +36,23 @@ export default function AdminTickets() {
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
   const [adminUserId, setAdminUserId] = useState<string | null>(null);
 
-  // Get current admin user ID
+  // Get current admin user ID and fetch tickets
   useEffect(() => {
-    const getAdminUser = async () => {
+    const initialize = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (user) setAdminUserId(user.id);
+      if (user) {
+        setAdminUserId(user.id);
+        // Fetch tickets after we have the user ID
+        await fetchTickets(user.id);
+      }
     };
-    getAdminUser();
+    initialize();
   }, []);
 
+  // Subscribe to realtime updates
   useEffect(() => {
-    fetchTickets();
+    if (!adminUserId) return;
 
-    // Subscribe to realtime updates
     const channel = supabase
       .channel('tickets-realtime')
       .on(
@@ -59,7 +63,7 @@ export default function AdminTickets() {
           table: 'update_tickets'
         },
         () => {
-          fetchTickets();
+          fetchTickets(adminUserId);
         }
       )
       .on(
@@ -70,10 +74,11 @@ export default function AdminTickets() {
           table: 'ticket_messages'
         },
         (payload) => {
+          console.log('New message received:', payload.new);
           // Show notification if user replied to a ticket
           if (!payload.new.is_admin) {
             toast.info("💬 New reply from user!");
-            fetchTickets();
+            fetchTickets(adminUserId);
           }
         }
       )
@@ -82,15 +87,17 @@ export default function AdminTickets() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [adminUserId]);
 
-  const fetchTickets = async () => {
+  const fetchTickets = async (userId: string) => {
+    console.log('Fetching tickets for admin:', userId);
     const { data, error } = await supabase
       .from("update_tickets")
       .select("*, users(business_name, email)")
       .order("submitted_at", { ascending: false });
 
     if (!error && data) {
+      console.log('Tickets fetched:', data.length);
       // Sort by priority and status
       const sorted = data.sort((a, b) => {
         if (a.status === "open" && b.status !== "open") return -1;
@@ -103,33 +110,37 @@ export default function AdminTickets() {
       setTickets(sorted as Ticket[]);
       
       // Fetch unread counts for each ticket
-      if (adminUserId) {
-        sorted.forEach(ticket => fetchUnreadCount(ticket.id));
+      for (const ticket of sorted) {
+        await fetchUnreadCount(ticket.id, userId);
       }
     }
     setLoading(false);
   };
 
-  const fetchUnreadCount = async (ticketId: string) => {
-    if (!adminUserId) return;
-
+  const fetchUnreadCount = async (ticketId: string, userId: string) => {
+    console.log('Fetching unread count for ticket:', ticketId, 'admin:', userId);
+    
     // Get last read time for this ticket by admin
-    const { data: readData } = await supabase
+    const { data: readData, error: readError } = await supabase
       .from("ticket_message_reads")
       .select("last_read_at")
       .eq("ticket_id", ticketId)
-      .eq("user_id", adminUserId)
-      .single();
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    console.log('Read data:', readData, 'error:', readError);
 
     // Count user messages (is_admin = false) created after last read time
-    const { count } = await supabase
+    const { count, error: countError } = await supabase
       .from("ticket_messages")
       .select("*", { count: 'exact', head: true })
       .eq("ticket_id", ticketId)
       .eq("is_admin", false)
       .gt("created_at", readData?.last_read_at || "1970-01-01");
 
-    if (count !== null) {
+    console.log('Unread count for ticket', ticketId, ':', count, 'error:', countError);
+
+    if (count !== null && count > 0) {
       setUnreadCounts(prev => ({ ...prev, [ticketId]: count }));
     }
   };
@@ -240,7 +251,7 @@ export default function AdminTickets() {
       toast.success(`Ticket marked as ${status}`);
       setSelectedTicket(null);
       setAdminNotes("");
-      fetchTickets();
+      if (adminUserId) fetchTickets(adminUserId);
     } catch (error) {
       console.error("Error updating ticket:", error);
       toast.error("Failed to update ticket");
