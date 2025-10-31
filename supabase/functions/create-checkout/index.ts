@@ -110,7 +110,7 @@ serve(async (req) => {
         },
       ],
       mode: 'subscription',
-      success_url: `${req.headers.get('origin') || 'https://bay.digital'}/success?session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `https://dashboard.bay.digital/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${req.headers.get('origin') || 'https://bay.digital'}/contact.html?canceled=true`,
       metadata: {
         user_id: userId,
