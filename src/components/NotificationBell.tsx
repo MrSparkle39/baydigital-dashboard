@@ -26,7 +26,17 @@ export function NotificationBell() {
     }
 
     if (notification.link) {
-      navigate(notification.link);
+      if (typeof notification.link === 'string' && notification.link.startsWith('/')) {
+        navigate(notification.link);
+      } else if (typeof notification.link === 'string' && /^[a-f0-9-]{10,}$/i.test(notification.link)) {
+        // If link looks like an ID, treat it as a ticket id
+        navigate(`/dashboard?ticket=${notification.link}`);
+      } else {
+        navigate(`/dashboard`);
+      }
+    } else if (notification.type && notification.type.includes('ticket')) {
+      // Fallback for ticket notifications without explicit link
+      navigate(`/dashboard`);
     }
   };
 

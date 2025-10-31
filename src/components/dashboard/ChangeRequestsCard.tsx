@@ -124,6 +124,55 @@ export const ChangeRequestsCard = () => {
     }
   };
 
+  // Optimistically clear unread and persist read state
+  const markTicketAsRead = async (ticketId: string) => {
+    if (!user) return;
+    setUnreadCounts(prev => ({ ...prev, [ticketId]: 0 }));
+    try {
+      await supabase
+        .from('ticket_message_reads')
+        .upsert(
+          { ticket_id: ticketId, user_id: user.id, last_read_at: new Date().toISOString() },
+          { onConflict: 'ticket_id,user_id' }
+        );
+    } catch (e) {
+      console.error('Failed to mark ticket as read', e);
+    }
+  };
+
+  // Allow deep-linking to a ticket via ?ticket=<id>
+  const openTicketById = async (ticketId: string) => {
+    const existing = tickets.find(t => t.id === ticketId);
+    if (existing) {
+      await markTicketAsRead(ticketId);
+      setSelectedTicket(existing);
+      return;
+    }
+    const { data } = await supabase
+      .from('update_tickets')
+      .select('id, title, description, status, submitted_at, priority, file_urls, last_message_at')
+      .eq('user_id', user?.id || '')
+      .eq('id', ticketId)
+      .maybeSingle();
+    if (data) {
+      await markTicketAsRead(ticketId);
+      setSelectedTicket(data as UpdateTicket);
+      setTickets(prev => [data as UpdateTicket, ...prev.filter(t => t.id !== ticketId)]);
+    }
+  };
+
+  // Handle ticket param and clear it after opening
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const ticketParam = params.get('ticket');
+    if (user && ticketParam) {
+      openTicketById(ticketParam);
+      const url = new URL(window.location.href);
+      url.searchParams.delete('ticket');
+      window.history.replaceState({}, '', url.pathname + url.search);
+    }
+  }, [user, tickets.length]);
+
   const fetchTicketsRemaining = async () => {
     if (!user) return;
 
@@ -211,7 +260,7 @@ export const ChangeRequestsCard = () => {
                         : 'bg-muted/50 hover:bg-muted border border-transparent'}
                       ${hasUnread ? 'ring-2 ring-destructive/50' : ''}
                     `}
-                    onClick={() => setSelectedTicket(ticket)}
+                    onClick={() => { markTicketAsRead(ticket.id); setSelectedTicket(ticket); }}
                   >
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
