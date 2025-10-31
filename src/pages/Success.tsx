@@ -32,6 +32,10 @@ const Success = () => {
         console.error('Verification error:', err);
       } finally {
         setVerifying(false);
+        // Redirect to external success page after email is triggered
+        setTimeout(() => {
+          window.location.href = 'https://bay.digital/success.html';
+        }, 1500);
       }
     };
 
