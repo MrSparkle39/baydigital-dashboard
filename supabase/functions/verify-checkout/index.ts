@@ -42,10 +42,10 @@ serve(async (req) => {
 
     const userId = session.client_reference_id
 
-    // Verify the user exists and get their email
+    // Verify the user exists and get their email and name
     const { data: userData, error: userError } = await supabaseAdmin
       .from('users')
-      .select('email')
+      .select('email, full_name')
       .eq('id', userId)
       .single()
 
@@ -54,6 +54,25 @@ serve(async (req) => {
     }
 
     console.log('Checkout verified for user:', userData.email)
+
+    // Send welcome email
+    try {
+      await supabaseAdmin.functions.invoke('send-email', {
+        body: {
+          type: 'welcome',
+          to: userData.email,
+          data: {
+            userName: userData.full_name || 'there',
+            userEmail: userData.email,
+            dashboardUrl: 'https://dashboard.bay.digital'
+          }
+        }
+      })
+      console.log('Welcome email sent to:', userData.email)
+    } catch (emailError) {
+      console.error('Failed to send welcome email:', emailError)
+      // Don't throw - we still want to complete the checkout verification
+    }
 
     // Return the user's email
     return new Response(

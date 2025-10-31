@@ -8,7 +8,7 @@ const corsHeaders = {
 };
 
 interface EmailRequest {
-  type: 'ticket_confirmation' | 'admin_notification' | 'ticket_update';
+  type: 'ticket_confirmation' | 'admin_notification' | 'ticket_update' | 'welcome';
   to: string;
   data: {
     ticketTitle?: string;
@@ -19,10 +19,177 @@ interface EmailRequest {
     priority?: string;
     status?: string;
     adminNotes?: string;
+    dashboardUrl?: string;
   };
 }
 
 // Email Templates
+function getWelcomeEmailHTML(userName: string, userEmail: string, dashboardUrl: string): string {
+  return `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Welcome to Bay Digital - Your Website is Being Built!</title>
+      </head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
+        
+        <!-- Header -->
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 20px; text-align: center; border-radius: 10px 10px 0 0;">
+          <h1 style="color: white; margin: 0; font-size: 32px; font-weight: bold;">🎉 Welcome to Bay Digital!</h1>
+          <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 16px;">Your Professional Website Journey Starts Now</p>
+        </div>
+        
+        <!-- Main Content -->
+        <div style="background: white; padding: 40px 30px; border-radius: 0 0 10px 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+          
+          <!-- Personal Greeting -->
+          <p style="font-size: 18px; margin-bottom: 20px; color: #333;">Hi ${userName},</p>
+          
+          <p style="font-size: 16px; margin-bottom: 25px; line-height: 1.8;">
+            Thank you for choosing Bay Digital! We're excited to build your professional website and help grow your business online. Our team is already getting started on your project.
+          </p>
+
+          <!-- Dashboard Access Box -->
+          <div style="background: #f8f9ff; border-left: 4px solid #667eea; padding: 20px; border-radius: 6px; margin: 30px 0;">
+            <h3 style="margin: 0 0 15px 0; font-size: 18px; color: #667eea;">📱 Your Dashboard is Ready</h3>
+            <p style="margin: 0 0 15px 0; font-size: 15px; color: #555;">
+              Access your dashboard anytime to track progress, submit update requests, and manage your website:
+            </p>
+            <div style="text-align: center; margin-top: 20px;">
+              <a href="${dashboardUrl}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">
+                Access Dashboard →
+              </a>
+            </div>
+            <p style="margin: 15px 0 0 0; font-size: 13px; color: #666; text-align: center;">
+              Login Email: ${userEmail}
+            </p>
+          </div>
+
+          <!-- Timeline Section -->
+          <h2 style="color: #333; font-size: 24px; margin: 40px 0 20px 0; text-align: center;">What Happens Next?</h2>
+          <p style="text-align: center; color: #666; margin-bottom: 30px;">Here's your website journey over the next 48 hours:</p>
+
+          <!-- Step 1 -->
+          <div style="background: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #667eea;">
+            <div style="display: flex; align-items: center; margin-bottom: 10px;">
+              <div style="background: #667eea; color: white; width: 32px; height: 32px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 12px;">1</div>
+              <h3 style="margin: 0; font-size: 18px; color: #333;">We Build Your Website</h3>
+            </div>
+            <p style="margin: 10px 0 0 44px; font-size: 15px; color: #555; line-height: 1.7;">
+              <strong>Next 24-48 Hours</strong><br>
+              Our team is already working on:
+            </p>
+            <ul style="margin: 10px 0 0 44px; padding-left: 20px; color: #555;">
+              <li style="margin-bottom: 8px;">Setting up your professional website</li>
+              <li style="margin-bottom: 8px;">Writing copy based on your business information</li>
+              <li style="margin-bottom: 8px;">Optimizing for mobile devices and search engines</li>
+              <li style="margin-bottom: 8px;">Configuring your contact form</li>
+            </ul>
+          </div>
+
+          <!-- Step 2 -->
+          <div style="background: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #10b981;">
+            <div style="display: flex; align-items: center; margin-bottom: 10px;">
+              <div style="background: #10b981; color: white; width: 32px; height: 32px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 12px;">2</div>
+              <h3 style="margin: 0; font-size: 18px; color: #333;">Preview & Approve</h3>
+            </div>
+            <p style="margin: 10px 0 0 44px; font-size: 15px; color: #555; line-height: 1.7;">
+              <strong>Within 48 Hours</strong><br>
+              We'll send you a preview link to review your site:
+            </p>
+            <ul style="margin: 10px 0 0 44px; padding-left: 20px; color: #555;">
+              <li style="margin-bottom: 8px;">Check all the content and information</li>
+              <li style="margin-bottom: 8px;">Request any changes you'd like</li>
+              <li style="margin-bottom: 8px;">Give us the green light to launch</li>
+            </ul>
+          </div>
+
+          <!-- Step 3 -->
+          <div style="background: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #f59e0b;">
+            <div style="display: flex; align-items: center; margin-bottom: 10px;">
+              <div style="background: #f59e0b; color: white; width: 32px; height: 32px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 12px;">3</div>
+              <h3 style="margin: 0; font-size: 18px; color: #333;">Launch!</h3>
+            </div>
+            <p style="margin: 10px 0 0 44px; font-size: 15px; color: #555; line-height: 1.7;">
+              <strong>Same Day as Approval</strong><br>
+              Once you approve, we'll:
+            </p>
+            <ul style="margin: 10px 0 0 44px; padding-left: 20px; color: #555;">
+              <li style="margin-bottom: 8px;">Make your website live</li>
+              <li style="margin-bottom: 8px;">Connect your domain (if you have one)</li>
+              <li style="margin-bottom: 8px;">Send you all your login details</li>
+              <li style="margin-bottom: 8px;">Start bringing in customers!</li>
+            </ul>
+          </div>
+
+          <!-- What You Can Do Section -->
+          <div style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%); padding: 25px; border-radius: 8px; margin: 30px 0;">
+            <h3 style="margin: 0 0 15px 0; font-size: 18px; color: #333;">💡 While You Wait</h3>
+            <p style="margin: 0 0 15px 0; font-size: 15px; color: #555;">
+              Log into your dashboard to:
+            </p>
+            <ul style="margin: 0; padding-left: 20px; color: #555;">
+              <li style="margin-bottom: 8px;">Track your website build progress</li>
+              <li style="margin-bottom: 8px;">Submit update requests or additional information</li>
+              <li style="margin-bottom: 8px;">View analytics (once your site is live)</li>
+              <li style="margin-bottom: 8px;">Manage your subscription</li>
+            </ul>
+          </div>
+
+          <!-- Need Help Section -->
+          <div style="border-top: 2px solid #f0f0f0; margin-top: 40px; padding-top: 30px;">
+            <h3 style="margin: 0 0 15px 0; font-size: 18px; color: #333; text-align: center;">🆘 Need Help?</h3>
+            <p style="margin: 0 0 20px 0; font-size: 15px; color: #555; text-align: center;">
+              We're here to help! Contact us anytime:
+            </p>
+            <div style="text-align: center;">
+              <p style="margin: 5px 0; font-size: 15px;">
+                <strong>Email:</strong> <a href="mailto:hello@bay.digital" style="color: #667eea; text-decoration: none;">hello@bay.digital</a>
+              </p>
+            </div>
+          </div>
+
+          <!-- Important Info Box -->
+          <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 20px; border-radius: 6px; margin: 30px 0;">
+            <h4 style="margin: 0 0 10px 0; font-size: 16px; color: #92400e;">📝 Remember Something?</h4>
+            <p style="margin: 0; font-size: 14px; color: #92400e; line-height: 1.6;">
+              Forgot to mention something about your business? No problem! Just reply to this email or use the dashboard to submit any additional information.
+            </p>
+          </div>
+
+          <!-- Closing -->
+          <div style="margin-top: 40px; padding-top: 30px; border-top: 2px solid #f0f0f0;">
+            <p style="font-size: 16px; margin-bottom: 5px; color: #333;">
+              We're excited to work with you!
+            </p>
+            <p style="font-size: 16px; margin: 0; color: #333;">
+              <strong>The Bay Digital Team</strong>
+            </p>
+          </div>
+
+        </div>
+        
+        <!-- Footer -->
+        <div style="text-align: center; padding: 30px 20px; color: #999; font-size: 13px;">
+          <p style="margin: 0 0 10px 0;">Bay Digital | Professional Website Management</p>
+          <p style="margin: 0;">
+            <a href="https://bay.digital" style="color: #667eea; text-decoration: none; margin: 0 10px;">Website</a>
+            <span style="color: #ddd;">|</span>
+            <a href="${dashboardUrl}" style="color: #667eea; text-decoration: none; margin: 0 10px;">Dashboard</a>
+            <span style="color: #ddd;">|</span>
+            <a href="mailto:hello@bay.digital" style="color: #667eea; text-decoration: none; margin: 0 10px;">Support</a>
+          </p>
+          <p style="margin: 15px 0 0 0; color: #bbb; font-size: 12px;">
+            You're receiving this email because you signed up for Bay Digital services.
+          </p>
+        </div>
+      </body>
+    </html>
+  `;
+}
+
 function getTicketConfirmationHTML(ticketTitle: string, ticketId: string): string {
   return `
     <!DOCTYPE html>
@@ -234,6 +401,11 @@ serve(async (req) => {
 
     // Generate email based on type
     switch (type) {
+      case 'welcome':
+        subject = `Welcome to Bay Digital - Your Website Journey Starts Now!`;
+        html = getWelcomeEmailHTML(data.userName!, data.userEmail!, data.dashboardUrl!);
+        break;
+
       case 'ticket_confirmation':
         subject = `Update Request Received - ${data.ticketTitle}`;
         html = getTicketConfirmationHTML(data.ticketTitle!, data.ticketId!);
