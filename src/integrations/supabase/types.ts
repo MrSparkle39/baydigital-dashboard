@@ -134,6 +134,47 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          created_at: string | null
+          id: string
+          link: string | null
+          message: string | null
+          read: boolean | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          link?: string | null
+          message?: string | null
+          read?: boolean | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          link?: string | null
+          message?: string | null
+          read?: boolean | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sites: {
         Row: {
           created_at: string | null
@@ -179,22 +220,32 @@ export type Database = {
         Row: {
           id: string
           last_read_at: string
+          last_read_message_id: string | null
           ticket_id: string
           user_id: string
         }
         Insert: {
           id?: string
           last_read_at?: string
+          last_read_message_id?: string | null
           ticket_id: string
           user_id: string
         }
         Update: {
           id?: string
           last_read_at?: string
+          last_read_message_id?: string | null
           ticket_id?: string
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "ticket_message_reads_last_read_message_id_fkey"
+            columns: ["last_read_message_id"]
+            isOneToOne: false
+            referencedRelation: "ticket_messages"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "ticket_message_reads_ticket_id_fkey"
             columns: ["ticket_id"]
@@ -324,9 +375,14 @@ export type Database = {
         Row: {
           additional_info: string | null
           billing_period_start: string | null
+          brand_colors: Json | null
+          business_address: string | null
+          business_description: string | null
           business_email: string | null
+          business_hours: string | null
           business_name: string | null
           business_phone: string | null
+          content_pages: Json | null
           created_at: string | null
           domain: string | null
           email: string
@@ -335,10 +391,13 @@ export type Database = {
           id: string
           industry: string | null
           location: string | null
+          logo_url: string | null
           phone: string | null
           plan: Database["public"]["Enums"]["user_plan"]
           preview_url: string | null
           services: string | null
+          signup_files: string[] | null
+          social_media: Json | null
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
           subscription_end_date: string | null
@@ -352,9 +411,14 @@ export type Database = {
         Insert: {
           additional_info?: string | null
           billing_period_start?: string | null
+          brand_colors?: Json | null
+          business_address?: string | null
+          business_description?: string | null
           business_email?: string | null
+          business_hours?: string | null
           business_name?: string | null
           business_phone?: string | null
+          content_pages?: Json | null
           created_at?: string | null
           domain?: string | null
           email: string
@@ -363,10 +427,13 @@ export type Database = {
           id: string
           industry?: string | null
           location?: string | null
+          logo_url?: string | null
           phone?: string | null
           plan?: Database["public"]["Enums"]["user_plan"]
           preview_url?: string | null
           services?: string | null
+          signup_files?: string[] | null
+          social_media?: Json | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           subscription_end_date?: string | null
@@ -380,9 +447,14 @@ export type Database = {
         Update: {
           additional_info?: string | null
           billing_period_start?: string | null
+          brand_colors?: Json | null
+          business_address?: string | null
+          business_description?: string | null
           business_email?: string | null
+          business_hours?: string | null
           business_name?: string | null
           business_phone?: string | null
+          content_pages?: Json | null
           created_at?: string | null
           domain?: string | null
           email?: string
@@ -391,10 +463,13 @@ export type Database = {
           id?: string
           industry?: string | null
           location?: string | null
+          logo_url?: string | null
           phone?: string | null
           plan?: Database["public"]["Enums"]["user_plan"]
           preview_url?: string | null
           services?: string | null
+          signup_files?: string[] | null
+          social_media?: Json | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           subscription_end_date?: string | null
@@ -468,6 +543,15 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      notify_admins: {
+        Args: {
+          notification_link: string
+          notification_message: string
+          notification_title: string
+          notification_type: string
+        }
+        Returns: undefined
       }
     }
     Enums: {
