@@ -15,6 +15,7 @@ import { AnalyticsViewer } from "@/components/admin/AnalyticsViewer";
 import { UserSitesManager } from "@/components/admin/UserSitesManager";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { format } from "date-fns";
 
 type User = Database["public"]["Tables"]["users"]["Row"];
 type Ticket = Database["public"]["Tables"]["update_tickets"]["Row"] & {
@@ -378,7 +379,7 @@ export default function AdminUserDetail() {
                   )}
 
                   <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
-                    <span>Submitted: {new Date(ticket.submitted_at!).toLocaleDateString()}</span>
+                    <span>Submitted: {format(new Date(ticket.submitted_at!), "dd/MM/yyyy HH:mm")}</span>
                   </div>
                 </CardContent>
               </Card>
@@ -399,7 +400,7 @@ export default function AdminUserDetail() {
                   </Badge>
                 </DialogTitle>
                 <DialogDescription>
-                  Submitted: {selectedTicket?.submitted_at && new Date(selectedTicket.submitted_at).toLocaleString()}
+                  Submitted: {selectedTicket?.submitted_at && format(new Date(selectedTicket.submitted_at), "dd/MM/yyyy HH:mm")}
                 </DialogDescription>
               </DialogHeader>
 

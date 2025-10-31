@@ -8,6 +8,7 @@ import { TicketDetailDialog } from "./TicketDetailDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { format } from "date-fns";
 
 interface UpdateTicket {
   id: string;
@@ -231,7 +232,7 @@ export const ChangeRequestsCard = () => {
                         )}
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">
-                        {new Date(ticket.submitted_at).toLocaleDateString()}
+                        {format(new Date(ticket.submitted_at), "dd/MM/yyyy")}
                         {hasUnread && <span className="ml-2 text-destructive font-semibold">• New Message!</span>}
                       </p>
                     </div>
@@ -266,6 +267,12 @@ export const ChangeRequestsCard = () => {
         ticket={selectedTicket}
         open={!!selectedTicket}
         onOpenChange={(open) => !open && setSelectedTicket(null)}
+        onClose={() => {
+          // Refetch unread counts when dialog closes
+          if (selectedTicket) {
+            fetchUnreadCount(selectedTicket.id);
+          }
+        }}
       />
     </>
   );

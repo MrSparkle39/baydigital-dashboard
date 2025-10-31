@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Mail, Circle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
+import { format } from "date-fns";
 
 interface Submission {
   id: string;
@@ -100,7 +101,7 @@ export const FormSubmissionsCard = ({
                     "{submission.message.substring(0, 40)}..."
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    {new Date(submission.submitted_at).toLocaleDateString()}
+                    {format(new Date(submission.submitted_at), "dd/MM/yyyy HH:mm")}
                   </p>
                 </div>
               </div>

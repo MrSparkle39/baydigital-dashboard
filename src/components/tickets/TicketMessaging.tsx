@@ -6,6 +6,7 @@ import { Send } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { Database } from "@/integrations/supabase/types";
+import { format } from "date-fns";
 
 type TicketMessage = Database["public"]["Tables"]["ticket_messages"]["Row"] & {
   users: { business_name: string | null; full_name: string | null; email: string } | null;
@@ -176,7 +177,7 @@ export const TicketMessaging = ({ ticketId, ticketTitle, ticketUserEmail, isAdmi
                   <div className={`text-xs mt-1 ${
                     isAdminMessage ? "text-primary-foreground/60" : "text-muted-foreground"
                   }`}>
-                    {new Date(message.created_at).toLocaleString()}
+                    {format(new Date(message.created_at), "dd/MM/yyyy HH:mm")}
                   </div>
                 </div>
               </div>

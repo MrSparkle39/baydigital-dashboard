@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { TicketMessaging } from "@/components/tickets/TicketMessaging";
+import { format } from "date-fns";
 
 type Ticket = Database["public"]["Tables"]["update_tickets"]["Row"] & {
   users: { business_name: string | null; email: string } | null;
@@ -381,7 +382,7 @@ export default function AdminTickets() {
                 <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
                   <div>
                     <p>From: {ticket.users?.business_name || ticket.users?.email}</p>
-                    <p>Submitted: {new Date(ticket.submitted_at!).toLocaleDateString()}</p>
+                    <p>Submitted: {format(new Date(ticket.submitted_at!), "dd/MM/yyyy HH:mm")}</p>
                     {hasUnread && (
                       <p className="text-destructive font-semibold mt-1">• New replies from user!</p>
                     )}
@@ -426,7 +427,7 @@ export default function AdminTickets() {
             </DialogTitle>
             <DialogDescription>
               From: {selectedTicket?.users?.business_name || selectedTicket?.users?.email} | 
-              Submitted: {selectedTicket?.submitted_at && new Date(selectedTicket.submitted_at).toLocaleString()}
+              Submitted: {selectedTicket?.submitted_at && format(new Date(selectedTicket.submitted_at), "dd/MM/yyyy HH:mm")}
             </DialogDescription>
           </DialogHeader>
 

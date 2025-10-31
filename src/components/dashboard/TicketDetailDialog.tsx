@@ -5,6 +5,8 @@ import { Download } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { TicketMessaging } from "@/components/tickets/TicketMessaging";
+import { format } from "date-fns";
+import { useEffect } from "react";
 
 interface UpdateTicket {
   id: string;
@@ -20,10 +22,18 @@ interface TicketDetailDialogProps {
   ticket: UpdateTicket | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onClose?: () => void;
 }
 
-export const TicketDetailDialog = ({ ticket, open, onOpenChange }: TicketDetailDialogProps) => {
+export const TicketDetailDialog = ({ ticket, open, onOpenChange, onClose }: TicketDetailDialogProps) => {
   if (!ticket) return null;
+
+  // Trigger onClose callback when dialog closes
+  useEffect(() => {
+    if (!open && onClose) {
+      onClose();
+    }
+  }, [open, onClose]);
 
   const getStoragePath = (filePath: string) => {
     if (!filePath) return filePath;
@@ -85,7 +95,7 @@ export const TicketDetailDialog = ({ ticket, open, onOpenChange }: TicketDetailD
             </Badge>
           </DialogTitle>
           <DialogDescription>
-            Submitted: {new Date(ticket.submitted_at).toLocaleString()}
+            Submitted: {format(new Date(ticket.submitted_at), "dd/MM/yyyy HH:mm")}
           </DialogDescription>
         </DialogHeader>
 
