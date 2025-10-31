@@ -15,6 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { TicketMessaging } from "@/components/tickets/TicketMessaging";
 
 type Ticket = Database["public"]["Tables"]["update_tickets"]["Row"] & {
   users: { business_name: string | null; email: string } | null;
@@ -363,16 +364,10 @@ export default function AdminTickets() {
               </div>
             )}
 
-            {/* Admin Notes */}
-            <div>
-              <h4 className="font-semibold mb-2">Admin Notes</h4>
-              <Textarea
-                value={adminNotes}
-                onChange={(e) => setAdminNotes(e.target.value)}
-                placeholder="Add internal notes about this ticket..."
-                rows={4}
-              />
-            </div>
+            {/* Messaging Thread */}
+            {selectedTicket && (
+              <TicketMessaging ticketId={selectedTicket.id} isAdmin={true} />
+            )}
 
             {/* Files Button */}
             <div>
@@ -388,11 +383,11 @@ export default function AdminTickets() {
 
             {/* Admin Notes */}
             <div>
-              <h4 className="font-semibold mb-2">Admin Notes</h4>
+              <h4 className="font-semibold mb-2">Admin Notes (Internal)</h4>
               <Textarea
                 value={adminNotes}
                 onChange={(e) => setAdminNotes(e.target.value)}
-                placeholder="Add internal notes about this ticket..."
+                placeholder="Add internal notes about this ticket (not visible to users)..."
                 rows={4}
               />
             </div>

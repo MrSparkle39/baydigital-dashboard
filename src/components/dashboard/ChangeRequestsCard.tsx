@@ -1,9 +1,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Edit, Clock, CheckCircle } from "lucide-react";
+import { Edit, Clock, CheckCircle, ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useState, useEffect } from "react";
 import { ChangeRequestModal } from "./ChangeRequestModal";
+import { TicketDetailDialog } from "./TicketDetailDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -13,10 +14,13 @@ interface UpdateTicket {
   description: string;
   status: string;
   submitted_at: string;
+  priority?: string;
+  file_urls?: string[];
 }
 
 export const ChangeRequestsCard = () => {
   const [modalOpen, setModalOpen] = useState(false);
+  const [selectedTicket, setSelectedTicket] = useState<UpdateTicket | null>(null);
   const [tickets, setTickets] = useState<UpdateTicket[]>([]);
   const [ticketsRemaining, setTicketsRemaining] = useState<number | null>(null);
   const { user } = useAuth();
@@ -33,7 +37,7 @@ export const ChangeRequestsCard = () => {
 
     const { data, error } = await supabase
       .from("update_tickets")
-      .select("id, title, description, status, submitted_at")
+      .select("id, title, description, status, submitted_at, priority, file_urls")
       .eq("user_id", user.id)
       .order("submitted_at", { ascending: false })
       .limit(2);
@@ -104,10 +108,14 @@ export const ChangeRequestsCard = () => {
               {tickets.map((ticket) => (
                 <div
                   key={ticket.id}
-                  className="flex items-center justify-between p-2 rounded-lg bg-muted/50"
+                  className="flex items-center justify-between p-2 rounded-lg bg-muted/50 cursor-pointer hover:bg-muted transition-colors"
+                  onClick={() => setSelectedTicket(ticket)}
                 >
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm truncate">{ticket.title.substring(0, 30)}...</p>
+                    <p className="text-sm truncate flex items-center gap-1">
+                      {ticket.title.substring(0, 30)}...
+                      <ExternalLink className="h-3 w-3" />
+                    </p>
                     <p className="text-xs text-muted-foreground mt-1">
                       {new Date(ticket.submitted_at).toLocaleDateString()}
                     </p>
@@ -132,6 +140,12 @@ export const ChangeRequestsCard = () => {
         open={modalOpen} 
         onOpenChange={setModalOpen}
         onTicketCreated={handleTicketCreated}
+      />
+
+      <TicketDetailDialog
+        ticket={selectedTicket}
+        open={!!selectedTicket}
+        onOpenChange={(open) => !open && setSelectedTicket(null)}
       />
     </>
   );
