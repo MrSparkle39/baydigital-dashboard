@@ -83,6 +83,21 @@ export default function AdminTickets() {
           }
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'ticket_message_reads',
+          filter: `user_id=eq.${adminUserId}`,
+        },
+        (payload) => {
+          // When read status changes, refetch unread count for that specific ticket
+          if (payload.new && 'ticket_id' in payload.new && payload.new.ticket_id) {
+            fetchUnreadCount(payload.new.ticket_id as string, adminUserId);
+          }
+        }
+      )
       .subscribe();
 
     return () => {

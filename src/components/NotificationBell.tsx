@@ -20,22 +20,30 @@ export function NotificationBell() {
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications(user?.id);
   const navigate = useNavigate();
 
-  const handleNotificationClick = (notification: any) => {
+  const handleNotificationClick = async (notification: any) => {
+    // Always mark as read first
     if (!notification.read) {
-      markAsRead(notification.id);
+      await markAsRead(notification.id);
     }
 
-    if (notification.link) {
+    // Handle navigation based on notification type and link
+    if (notification.type === 'ticket_reply' || notification.type === 'ticket_message' || notification.type === 'new_ticket' || notification.type === 'ticket_status') {
+      // For ticket-related notifications, the link contains the ticket ID
+      if (notification.link && typeof notification.link === 'string') {
+        // Navigate to dashboard with ticket query param
+        navigate(`/dashboard?ticket=${notification.link}`);
+      } else {
+        // Fallback to just dashboard
+        navigate('/dashboard');
+      }
+    } else if (notification.link) {
       if (typeof notification.link === 'string' && notification.link.startsWith('/')) {
         navigate(notification.link);
-      } else if (typeof notification.link === 'string' && /^[a-f0-9-]{10,}$/i.test(notification.link)) {
-        // If link looks like an ID, treat it as a ticket id
-        navigate(`/dashboard?ticket=${notification.link}`);
       } else {
         navigate(`/dashboard`);
       }
-    } else if (notification.type && notification.type.includes('ticket')) {
-      // Fallback for ticket notifications without explicit link
+    } else {
+      // Default fallback
       navigate(`/dashboard`);
     }
   };

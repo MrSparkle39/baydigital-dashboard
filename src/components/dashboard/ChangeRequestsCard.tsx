@@ -37,7 +37,7 @@ export const ChangeRequestsCard = () => {
     }
   }, [user]);
 
-  // Subscribe to realtime updates for new messages
+  // Subscribe to realtime updates for new messages AND read status changes
   useEffect(() => {
     if (!user) return;
 
@@ -58,6 +58,21 @@ export const ChangeRequestsCard = () => {
           const ticketIds = tickets.map(t => t.id);
           if (ticketIds.includes(payload.new.ticket_id)) {
             toast.info("💬 New message received on your ticket!");
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'ticket_message_reads',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          // When read status changes, refetch unread counts
+          if (payload.new && 'ticket_id' in payload.new && payload.new.ticket_id) {
+            fetchUnreadCount(payload.new.ticket_id as string);
           }
         }
       )
