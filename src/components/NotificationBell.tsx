@@ -12,39 +12,67 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useAuth } from "@/contexts/AuthContext";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { getNotificationIcon, formatNotificationTime } from "@/lib/notifications";
+import { supabase } from "@/integrations/supabase/client";
+import { useEffect, useState } from "react";
 
 export function NotificationBell() {
   const { user } = useAuth();
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications(user?.id);
   const navigate = useNavigate();
+  const location = useLocation();
+  const [isAdmin, setIsAdmin] = useState(false);
 
-  const handleNotificationClick = async (notification: any) => {
-    // Always mark as read first
+  // Check if user is admin
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      if (!user) return;
+      const { data } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .eq('role', 'admin')
+        .maybeSingle();
+      setIsAdmin(!!data);
+    };
+    checkAdminStatus();
+  }, [user]);
+
+  const handleNotificationClick = (notification: any) => {
+    // Mark as read asynchronously (don't wait)
     if (!notification.read) {
-      await markAsRead(notification.id);
+      markAsRead(notification.id);
     }
+
+    // Determine if we're in admin context
+    const inAdminArea = location.pathname.startsWith('/admin');
 
     // Handle navigation based on notification type and link
     if (notification.type === 'ticket_reply' || notification.type === 'ticket_message' || notification.type === 'new_ticket' || notification.type === 'ticket_status') {
       // For ticket-related notifications, the link contains the ticket ID
       if (notification.link && typeof notification.link === 'string') {
-        // Navigate to dashboard with ticket query param
-        navigate(`/dashboard?ticket=${notification.link}`);
+        // Route based on whether user is admin and notification type
+        if (isAdmin && (notification.type === 'new_ticket' || notification.type === 'ticket_reply')) {
+          // Admin notifications for user messages - go to admin tickets
+          navigate(`/admin/tickets`);
+        } else {
+          // User notifications - go to dashboard with ticket query param
+          navigate(`/dashboard?ticket=${notification.link}`);
+        }
       } else {
-        // Fallback to just dashboard
-        navigate('/dashboard');
+        // Fallback based on current context
+        navigate(inAdminArea ? '/admin/tickets' : '/dashboard');
       }
     } else if (notification.link) {
       if (typeof notification.link === 'string' && notification.link.startsWith('/')) {
         navigate(notification.link);
       } else {
-        navigate(`/dashboard`);
+        navigate(inAdminArea ? '/admin' : '/dashboard');
       }
     } else {
-      // Default fallback
-      navigate(`/dashboard`);
+      // Default fallback based on context
+      navigate(inAdminArea ? '/admin' : '/dashboard');
     }
   };
 
