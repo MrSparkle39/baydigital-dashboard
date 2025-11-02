@@ -95,7 +95,8 @@ serve(async (req) => {
           results.reminders_24h++;
         }
       } catch (err) {
-        results.errors.push(`24h reminder error for ${user.email}: ${err.message}`);
+        const error = err as Error;
+        results.errors.push(`24h reminder error for ${user.email}: ${error.message}`);
       }
     }
 
@@ -126,7 +127,8 @@ serve(async (req) => {
           results.reminders_72h++;
         }
       } catch (err) {
-        results.errors.push(`72h reminder error for ${user.email}: ${err.message}`);
+        const error = err as Error;
+        results.errors.push(`72h reminder error for ${user.email}: ${error.message}`);
       }
     }
 

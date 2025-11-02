@@ -8,7 +8,9 @@ const corsHeaders = {
 };
 
 interface EmailRequest {
-  type: 'ticket_confirmation' | 'admin_notification' | 'ticket_update' | 'welcome' | 'ticket_reply' | 'ticket_reply_admin';
+  type: 'ticket_confirmation' | 'admin_notification' | 'ticket_update' | 'welcome' | 'ticket_reply' | 'ticket_reply_admin' | 
+        'new_user_admin' | 'onboarding_complete_admin' | 'site_ready_review' | 'site_launched' | 
+        'onboarding_reminder_24h' | 'onboarding_reminder_72h' | 'payment_failed' | 'subscription_cancelled';
   to: string;
   data: {
     ticketTitle?: string;
@@ -21,6 +23,14 @@ interface EmailRequest {
     adminNotes?: string;
     dashboardUrl?: string;
     message?: string;
+    businessName?: string;
+    plan?: string;
+    onboardingDetails?: string;
+    previewUrl?: string;
+    siteUrl?: string;
+    onboardingProgress?: string;
+    paymentAmount?: string;
+    cardLast4?: string;
   };
 }
 
@@ -475,6 +485,228 @@ serve(async (req) => {
               <div style="text-align: center;">
                 <a href="https://dashboard.bay.digital/admin/tickets" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: 600;">
                   Reply in Dashboard →
+                </a>
+              </div>
+            </div>
+          </div>
+        `;
+        break;
+
+      case 'new_user_admin':
+        subject = `🎉 New Client Signup: ${data.businessName}`;
+        html = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background: #10b981; padding: 30px 20px; text-align: center;">
+              <h1 style="color: white; margin: 0;">🎉 New Client Signed Up!</h1>
+            </div>
+            <div style="padding: 30px; background: #f9f9f9;">
+              <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                <h2 style="margin: 0 0 15px 0; color: #333;">Client Details</h2>
+                <p style="margin: 5px 0;"><strong>Name:</strong> ${data.userName}</p>
+                <p style="margin: 5px 0;"><strong>Email:</strong> ${data.userEmail}</p>
+                <p style="margin: 5px 0;"><strong>Business:</strong> ${data.businessName}</p>
+                <p style="margin: 5px 0;"><strong>Plan:</strong> ${data.plan}</p>
+              </div>
+              <div style="text-align: center;">
+                <a href="https://dashboard.bay.digital/admin/users" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: 600;">
+                  View in Admin Dashboard →
+                </a>
+              </div>
+            </div>
+          </div>
+        `;
+        break;
+
+      case 'onboarding_complete_admin':
+        subject = `✅ Onboarding Complete: ${data.businessName}`;
+        html = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background: #667eea; padding: 30px 20px; text-align: center;">
+              <h1 style="color: white; margin: 0;">✅ Client Completed Onboarding</h1>
+            </div>
+            <div style="padding: 30px; background: #f9f9f9;">
+              <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                <h2 style="margin: 0 0 15px 0; color: #333;">${data.businessName}</h2>
+                <p style="margin: 5px 0;"><strong>Contact:</strong> ${data.userName} (${data.userEmail})</p>
+              </div>
+              <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                <h3 style="margin: 0 0 10px 0; color: #333;">Onboarding Details</h3>
+                <p style="white-space: pre-wrap; font-size: 14px;">${data.onboardingDetails}</p>
+              </div>
+              <div style="text-align: center;">
+                <a href="https://dashboard.bay.digital/admin/users" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: 600;">
+                  Start Building Site →
+                </a>
+              </div>
+            </div>
+          </div>
+        `;
+        break;
+
+      case 'site_ready_review':
+        subject = `🎨 Your Website is Ready for Review!`;
+        html = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 20px; text-align: center;">
+              <h1 style="color: white; margin: 0;">🎨 Your Website is Ready!</h1>
+            </div>
+            <div style="padding: 40px 30px; background: #f9f9f9;">
+              <p>Hi ${data.userName},</p>
+              <p>Great news! We've finished building your website for <strong>${data.businessName}</strong> and it's ready for your review.</p>
+              <div style="background: white; padding: 25px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #10b981;">
+                <h3 style="margin: 0 0 15px 0; color: #333;">Preview Your Site</h3>
+                <p style="margin: 0 0 15px 0;">Click below to see your new website in action:</p>
+                <div style="text-align: center;">
+                  <a href="${data.previewUrl}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">
+                    Preview Website →
+                  </a>
+                </div>
+              </div>
+              <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 20px; border-radius: 6px; margin: 20px 0;">
+                <h4 style="margin: 0 0 10px 0; color: #92400e;">📝 Review Checklist</h4>
+                <ul style="margin: 10px 0; padding-left: 20px; color: #92400e;">
+                  <li>Check all content and business information</li>
+                  <li>Test the contact form</li>
+                  <li>Review images and branding</li>
+                  <li>Try on mobile and desktop</li>
+                </ul>
+              </div>
+              <p>Once you're happy with everything, just reply to this email or submit any change requests through your dashboard. We'll launch your site as soon as you give us the go-ahead!</p>
+              <p>Best regards,<br><strong>The Bay Digital Team</strong></p>
+            </div>
+          </div>
+        `;
+        break;
+
+      case 'site_launched':
+        subject = `🚀 Your Website is Live!`;
+        html = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 40px 20px; text-align: center;">
+              <h1 style="color: white; margin: 0; font-size: 32px;">🚀 You're Live!</h1>
+            </div>
+            <div style="padding: 40px 30px; background: #f9f9f9;">
+              <p style="font-size: 18px;">Hi ${data.userName},</p>
+              <p style="font-size: 16px;">Congratulations! Your website for <strong>${data.businessName}</strong> is now live and ready to attract customers!</p>
+              <div style="background: white; padding: 30px; border-radius: 8px; margin: 30px 0; text-align: center; border: 2px solid #10b981;">
+                <h3 style="margin: 0 0 15px 0; color: #333;">🌐 Your Live Website</h3>
+                <p style="font-size: 24px; font-weight: bold; color: #667eea; margin: 10px 0;">${data.siteUrl}</p>
+                <div style="margin-top: 20px;">
+                  <a href="${data.siteUrl}" style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">
+                    Visit Your Site →
+                  </a>
+                </div>
+              </div>
+              <div style="background: #e0f2fe; border-left: 4px solid #0284c7; padding: 20px; border-radius: 6px; margin: 20px 0;">
+                <h4 style="margin: 0 0 15px 0; color: #075985;">💡 What's Next?</h4>
+                <ul style="margin: 0; padding-left: 20px; color: #075985;">
+                  <li style="margin-bottom: 8px;">Share your website on social media</li>
+                  <li style="margin-bottom: 8px;">Update your Google Business listing with the URL</li>
+                  <li style="margin-bottom: 8px;">Monitor form submissions in your dashboard</li>
+                  <li style="margin-bottom: 8px;">Track your analytics to see visitor activity</li>
+                </ul>
+              </div>
+              <p>Need updates or changes? Submit a request anytime through your dashboard. We're here to help your business grow!</p>
+              <p style="font-size: 16px; margin-top: 30px;">Best regards,<br><strong>The Bay Digital Team</strong></p>
+            </div>
+          </div>
+        `;
+        break;
+
+      case 'onboarding_reminder_24h':
+        subject = `⏰ Complete Your Website Setup - Quick 5-Minute Form`;
+        html = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 40px 20px; text-align: center;">
+              <h1 style="color: white; margin: 0;">⏰ Finish Your Setup</h1>
+            </div>
+            <div style="padding: 40px 30px; background: #f9f9f9;">
+              <p>Hi ${data.userName},</p>
+              <p>We noticed you haven't finished setting up your website yet. You're almost there!</p>
+              <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f59e0b;">
+                <p style="margin: 0; font-size: 16px;"><strong>Your Progress:</strong> ${data.onboardingProgress}</p>
+              </div>
+              <p>Complete the setup now to get your professional website built within 48 hours!</p>
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="https://dashboard.bay.digital/onboarding" style="display: inline-block; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">
+                  Complete Setup (5 min) →
+                </a>
+              </div>
+              <p style="font-size: 14px; color: #666;">Questions? Just reply to this email - we're here to help!</p>
+              <p>Best regards,<br><strong>The Bay Digital Team</strong></p>
+            </div>
+          </div>
+        `;
+        break;
+
+      case 'onboarding_reminder_72h':
+        subject = `🚨 Don't Miss Out - Complete Your Website Setup`;
+        html = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); padding: 40px 20px; text-align: center;">
+              <h1 style="color: white; margin: 0;">🚨 Your Website is Waiting</h1>
+            </div>
+            <div style="padding: 40px 30px; background: #f9f9f9;">
+              <p>Hi ${data.userName},</p>
+              <p><strong>You're just minutes away from having a professional website!</strong></p>
+              <p>Your account is set up, but we can't start building your site until you complete the onboarding form. It only takes 5 minutes.</p>
+              <div style="background: #fee2e2; border-left: 4px solid #ef4444; padding: 20px; border-radius: 6px; margin: 20px 0;">
+                <p style="margin: 0; color: #991b1b;"><strong>⚠️ Action Required:</strong> Complete the setup form to activate your website build.</p>
+              </div>
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="https://dashboard.bay.digital/onboarding" style="display: inline-block; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; padding: 16px 36px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 18px;">
+                  Complete Setup Now →
+                </a>
+              </div>
+              <p style="font-size: 14px; color: #666;">Need help or have questions? Reply to this email anytime!</p>
+              <p>Best regards,<br><strong>The Bay Digital Team</strong></p>
+            </div>
+          </div>
+        `;
+        break;
+
+      case 'payment_failed':
+        subject = `⚠️ Payment Failed - Update Your Payment Method`;
+        html = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background: #ef4444; padding: 30px 20px; text-align: center;">
+              <h1 style="color: white; margin: 0;">⚠️ Payment Failed</h1>
+            </div>
+            <div style="padding: 30px; background: #f9f9f9;">
+              <p>Hi ${data.userName},</p>
+              <p>We were unable to process your payment of <strong>${data.paymentAmount}</strong> for your Bay Digital subscription.</p>
+              <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ef4444;">
+                <p style="margin: 0;"><strong>Card ending in:</strong> ${data.cardLast4}</p>
+                <p style="margin: 10px 0 0 0; font-size: 14px; color: #666;">Please update your payment method to keep your website active.</p>
+              </div>
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="https://dashboard.bay.digital/dashboard" style="display: inline-block; background: #ef4444; color: white; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: 600;">
+                  Update Payment Method →
+                </a>
+              </div>
+              <p style="font-size: 14px; color: #666;">If you have any questions, please reply to this email.</p>
+              <p>Best regards,<br><strong>The Bay Digital Team</strong></p>
+            </div>
+          </div>
+        `;
+        break;
+
+      case 'subscription_cancelled':
+        subject = `📋 Subscription Cancelled: ${data.businessName}`;
+        html = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background: #6b7280; padding: 30px 20px; text-align: center;">
+              <h1 style="color: white; margin: 0;">📋 Subscription Cancelled</h1>
+            </div>
+            <div style="padding: 30px; background: #f9f9f9;">
+              <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                <h2 style="margin: 0 0 15px 0; color: #333;">${data.businessName}</h2>
+                <p style="margin: 5px 0;"><strong>Client:</strong> ${data.userName} (${data.userEmail})</p>
+                <p style="margin: 5px 0;"><strong>Status:</strong> Subscription Cancelled</p>
+              </div>
+              <div style="text-align: center;">
+                <a href="https://dashboard.bay.digital/admin/users" style="display: inline-block; background: #6b7280; color: white; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: 600;">
+                  View in Admin Dashboard →
                 </a>
               </div>
             </div>
