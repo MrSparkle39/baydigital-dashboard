@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,7 @@ export default function Onboarding() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
+  const [isLoading, setIsLoading] = useState(true);
   const totalSteps = 6;
 
   // Form state - organized by category
@@ -91,6 +92,98 @@ export default function Onboarding() {
     teamPhotos: [],
     beforeAfterPhotos: [],
   });
+
+  // Load saved progress on mount
+  useEffect(() => {
+    const loadProgress = async () => {
+      if (!user) return;
+
+      try {
+        const { data, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+
+        if (error) throw error;
+
+        if (data) {
+          // Restore step
+          if (data.onboarding_step) {
+            setCurrentStep(data.onboarding_step);
+          }
+
+          // Restore form data
+          const brandColors = data.brand_colors as { primary?: string; secondary?: string } | null;
+          const socialMedia = data.social_media as { facebook?: string; instagram?: string; linkedin?: string; googleBusiness?: string } | null;
+          const websiteFeatures = data.website_features as { booking?: boolean; quoteForm?: boolean; gallery?: boolean; testimonials?: boolean; serviceMap?: boolean; faq?: boolean; blog?: boolean } | null;
+          
+          setFormData({
+            businessName: data.business_name || "",
+            industry: data.industry || "",
+            businessSize: data.business_size || "",
+            location: data.location || "",
+            serviceArea: data.service_area || "",
+            yearsInBusiness: data.years_in_business || "",
+            services: data.services || "",
+            topServices: data.top_services || "",
+            pricingStrategy: data.pricing_strategy || "contact",
+            emergencyService: data.emergency_service || false,
+            certifications: data.certifications || "",
+            tagline: data.tagline || "",
+            aboutUs: data.business_description || "",
+            brandStyle: data.brand_style || "modern",
+            primaryColor: brandColors?.primary || "",
+            secondaryColor: brandColors?.secondary || "",
+            exampleWebsites: data.example_websites || "",
+            competitorWebsites: data.competitor_websites || "",
+            phone: data.phone || "",
+            emergencyPhone: data.emergency_phone || "",
+            businessEmail: data.business_email || "",
+            businessHours: data.business_hours || "",
+            facebookUrl: socialMedia?.facebook || "",
+            instagramUrl: socialMedia?.instagram || "",
+            linkedinUrl: socialMedia?.linkedin || "",
+            googleBusinessUrl: socialMedia?.googleBusiness || "",
+            preferredContact: data.preferred_contact_method || "phone",
+            needsBooking: websiteFeatures?.booking || false,
+            needsQuoteForm: websiteFeatures?.quoteForm !== false,
+            needsGallery: websiteFeatures?.gallery !== false,
+            needsTestimonials: websiteFeatures?.testimonials !== false,
+            needsServiceAreaMap: websiteFeatures?.serviceMap !== false,
+            needsFaq: websiteFeatures?.faq || false,
+            needsBlog: websiteFeatures?.blog || false,
+            targetKeywords: data.target_keywords || "",
+            uniqueSellingPoints: data.unique_selling_points || "",
+            specialOffers: data.special_offers || "",
+            monthlyGoals: data.monthly_goals || "",
+            existingDomain: data.existing_domain || "",
+            existingWebsite: data.existing_website || "",
+            needsEmail: data.needs_email || false,
+            emailCount: data.email_count || 1,
+            desiredEmails: data.desired_emails?.join(', ') || "",
+            businessObjectives: data.business_objectives || [],
+            competitorAnalysis: data.competitor_analysis || "",
+            newsletterSignup: data.newsletter_signup || false,
+          });
+
+          // Restore uploaded files
+          if (data.logo_url) {
+            setUploadedFiles(prev => ({ ...prev, logo: data.logo_url }));
+          }
+          if (data.signup_files && data.signup_files.length > 0) {
+            setUploadedFiles(prev => ({ ...prev, workPhotos: data.signup_files }));
+          }
+        }
+      } catch (error) {
+        console.error('Error loading progress:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadProgress();
+  }, [user]);
 
   const progress = (currentStep / totalSteps) * 100;
 
@@ -261,6 +354,17 @@ export default function Onboarding() {
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-primary/5 to-secondary/5 p-6 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading your progress...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 to-secondary/5 p-6">
       <div className="max-w-4xl mx-auto">
@@ -268,7 +372,7 @@ export default function Onboarding() {
           <CardHeader>
             <CardTitle>Welcome! Let's Build Your Website</CardTitle>
             <CardDescription>
-              Tell us about your business so we can create the perfect website for you
+              {currentStep > 1 ? "Continue where you left off" : "Tell us about your business so we can create the perfect website for you"}
             </CardDescription>
             <div className="mt-4">
               <div className="flex justify-between text-sm text-muted-foreground mb-2">
