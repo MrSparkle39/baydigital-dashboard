@@ -77,6 +77,7 @@ export default function Onboarding() {
     existingWebsite: "",
     needsEmail: false,
     emailCount: 1,
+    desiredEmails: "",
     
     // Professional plan specifics
     businessObjectives: [],
@@ -204,6 +205,7 @@ export default function Onboarding() {
           existing_website: formData.existingWebsite,
           needs_email: formData.needsEmail,
           email_count: formData.emailCount,
+          desired_emails: formData.desiredEmails ? formData.desiredEmails.split(',').map(e => e.trim()) : null,
           
           // Professional plan
           business_objectives: formData.businessObjectives,
@@ -984,15 +986,29 @@ export default function Onboarding() {
                       </label>
 
                       {formData.needsEmail && (
-                        <div>
-                          <Label htmlFor="emailCount">How many email addresses?</Label>
-                          <Input
-                            id="emailCount"
-                            type="number"
-                            min="1"
-                            value={formData.emailCount}
-                            onChange={(e) => updateField('emailCount', parseInt(e.target.value))}
-                          />
+                        <div className="space-y-3">
+                          <div>
+                            <Label htmlFor="emailCount">How many email addresses?</Label>
+                            <Input
+                              id="emailCount"
+                              type="number"
+                              min="1"
+                              value={formData.emailCount}
+                              onChange={(e) => updateField('emailCount', parseInt(e.target.value))}
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="desiredEmails">What email addresses would you like?</Label>
+                            <Input
+                              id="desiredEmails"
+                              value={formData.desiredEmails}
+                              onChange={(e) => updateField('desiredEmails', e.target.value)}
+                              placeholder="hello@example.com, john@example.com, info@example.com"
+                            />
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Separate multiple email addresses with commas
+                            </p>
+                          </div>
                         </div>
                       )}
                     </div>

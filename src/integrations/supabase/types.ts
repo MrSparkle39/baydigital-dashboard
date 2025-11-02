@@ -390,6 +390,7 @@ export type Database = {
           competitor_websites: string | null
           content_pages: Json | null
           created_at: string | null
+          desired_emails: string[] | null
           domain: string | null
           email: string
           email_count: number | null
@@ -453,6 +454,7 @@ export type Database = {
           competitor_websites?: string | null
           content_pages?: Json | null
           created_at?: string | null
+          desired_emails?: string[] | null
           domain?: string | null
           email: string
           email_count?: number | null
@@ -516,6 +518,7 @@ export type Database = {
           competitor_websites?: string | null
           content_pages?: Json | null
           created_at?: string | null
+          desired_emails?: string[] | null
           domain?: string | null
           email?: string
           email_count?: number | null

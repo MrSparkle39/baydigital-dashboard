@@ -354,7 +354,36 @@ export default function AdminUserDetail() {
                 <div>
                   <Label>Logo</Label>
                   {user.logo_url ? (
-                    <img src={user.logo_url} alt="Business logo" className="mt-2 max-w-[200px] h-auto" />
+                    <div className="space-y-2">
+                      <img src={user.logo_url} alt="Business logo" className="mt-2 max-w-[200px] h-auto" />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={async () => {
+                          try {
+                            const marker = "/onboarding-files/";
+                            const idx = user.logo_url!.indexOf(marker);
+                            const path = idx !== -1 ? user.logo_url!.substring(idx + marker.length) : user.logo_url!;
+                            const { data, error } = await supabase.storage.from("onboarding-files").download(path);
+                            if (error) throw error;
+                            const fileName = user.logo_url!.split("/").pop() || "logo";
+                            const objectUrl = window.URL.createObjectURL(data);
+                            const link = document.createElement("a");
+                            link.href = objectUrl;
+                            link.download = fileName;
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                            window.URL.revokeObjectURL(objectUrl);
+                          } catch (err) {
+                            console.error(err);
+                            toast.error("Failed to download logo");
+                          }
+                        }}
+                      >
+                        <Download className="h-4 w-4 mr-2" /> Download Logo
+                      </Button>
+                    </div>
                   ) : (
                     <p className="mt-1 text-muted-foreground">Not uploaded</p>
                   )}
