@@ -41,8 +41,8 @@ export default function Onboarding() {
     tagline: "",
     aboutUs: "",
     brandStyle: "modern", // modern, classic, bold, minimal
-    primaryColor: "#667eea",
-    secondaryColor: "#764ba2",
+    primaryColor: "",
+    secondaryColor: "",
     exampleWebsites: "",
     competitorWebsites: "",
     
