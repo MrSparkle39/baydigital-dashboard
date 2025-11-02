@@ -319,7 +319,7 @@ export default function Onboarding() {
                       id="location"
                       value={formData.location}
                       onChange={(e) => updateField('location', e.target.value)}
-                      placeholder="San Francisco, CA"
+                      placeholder="Sydney, NSW"
                       required
                     />
                   </div>
@@ -330,7 +330,7 @@ export default function Onboarding() {
                       id="serviceArea"
                       value={formData.serviceArea}
                       onChange={(e) => updateField('serviceArea', e.target.value)}
-                      placeholder="30 miles / Entire Bay Area"
+                      placeholder="50km / Greater Sydney"
                     />
                   </div>
 
@@ -409,7 +409,7 @@ export default function Onboarding() {
                       id="certifications"
                       value={formData.certifications}
                       onChange={(e) => updateField('certifications', e.target.value)}
-                      placeholder="Licensed & Insured, EPA Certified, Master Plumber"
+                      placeholder="Licensed & Insured, Plumbing Industry Commission Certified"
                     />
                   </div>
 
@@ -628,7 +628,7 @@ export default function Onboarding() {
                         type="tel"
                         value={formData.phone}
                         onChange={(e) => updateField('phone', e.target.value)}
-                        placeholder="(555) 123-4567"
+                        placeholder="0412 345 678"
                         required
                       />
                     </div>
@@ -640,7 +640,7 @@ export default function Onboarding() {
                         type="tel"
                         value={formData.emergencyPhone}
                         onChange={(e) => updateField('emergencyPhone', e.target.value)}
-                        placeholder="(555) 987-6543"
+                        placeholder="0412 987 654"
                       />
                     </div>
                   </div>
@@ -913,7 +913,7 @@ export default function Onboarding() {
                       id="targetKeywords"
                       value={formData.targetKeywords}
                       onChange={(e) => updateField('targetKeywords', e.target.value)}
-                      placeholder="emergency plumber san francisco, 24 hour plumbing, water heater repair"
+                      placeholder="emergency plumber sydney, 24 hour plumbing, hot water repair"
                       rows={3}
                     />
                     <p className="text-xs text-muted-foreground mt-1">
@@ -956,7 +956,7 @@ export default function Onboarding() {
                           id="existingDomain"
                           value={formData.existingDomain}
                           onChange={(e) => updateField('existingDomain', e.target.value)}
-                          placeholder="yourbusiness.com"
+                          placeholder="yourbusiness.com.au"
                         />
                         <p className="text-xs text-muted-foreground mt-1">
                           Leave blank if you need us to help you get one
