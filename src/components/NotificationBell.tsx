@@ -49,20 +49,12 @@ export function NotificationBell() {
     const inAdminArea = location.pathname.startsWith('/admin');
 
     // Handle navigation based on notification type and link
-    if (notification.type === 'ticket_reply' || notification.type === 'ticket_message' || notification.type === 'new_ticket' || notification.type === 'ticket_status') {
-      // For ticket-related notifications, the link contains the ticket ID
-      if (notification.link && typeof notification.link === 'string') {
-        // Route based on whether user is admin and notification type
-        if (isAdmin && (notification.type === 'new_ticket' || notification.type === 'ticket_reply')) {
-          // Admin notifications for user messages - go to admin tickets
-          navigate(`/admin/tickets`);
-        } else {
-          // User notifications - go to dashboard with ticket query param
-          navigate(`/dashboard?ticket=${notification.link}`);
-        }
+    if (['ticket_reply','ticket_message','new_ticket','ticket_status'].includes(notification.type)) {
+      const id = typeof notification.link === 'string' ? notification.link : undefined;
+      if (inAdminArea || isAdmin) {
+        navigate(id ? `/admin/tickets?ticket=${id}` : '/admin/tickets');
       } else {
-        // Fallback based on current context
-        navigate(inAdminArea ? '/admin/tickets' : '/dashboard');
+        navigate(id ? `/dashboard?ticket=${id}` : '/dashboard');
       }
     } else if (notification.link) {
       if (typeof notification.link === 'string' && notification.link.startsWith('/')) {

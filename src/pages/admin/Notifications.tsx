@@ -39,8 +39,20 @@ export default function AdminNotifications() {
       markAsRead(notification.id);
     }
 
+    // Ticket-related: deep link to admin tickets with query param
+    if (['ticket_reply','ticket_message','new_ticket','ticket_status'].includes(notification.type)) {
+      const id = typeof notification.link === 'string' ? notification.link : undefined;
+      navigate(id ? `/admin/tickets?ticket=${id}` : '/admin/tickets');
+      return;
+    }
+
     if (notification.link) {
-      navigate(notification.link);
+      if (typeof notification.link === 'string' && notification.link.startsWith('/')) {
+        navigate(notification.link);
+      } else {
+        // If link is an ID or invalid path, default to tickets
+        navigate('/admin/tickets');
+      }
     }
   };
 

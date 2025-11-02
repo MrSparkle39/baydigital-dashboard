@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Database } from "@/integrations/supabase/types";
 import { Download, ExternalLink, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
@@ -31,6 +31,7 @@ export default function AdminTickets() {
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [adminNotes, setAdminNotes] = useState("");
   const navigate = useNavigate();
+  const location = useLocation();
   const [filesDialogOpen, setFilesDialogOpen] = useState(false);
   const [ticketFiles, setTicketFiles] = useState<string[]>([]);
   const [fileCountMap, setFileCountMap] = useState<Record<string, number>>({});
@@ -298,6 +299,18 @@ export default function AdminTickets() {
       }
     }
   };
+
+  // Deep-link: open ticket by ID from query param
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const ticketId = params.get('ticket');
+    if (ticketId && tickets.length) {
+      const ticket = tickets.find(t => t.id === ticketId);
+      if (ticket) {
+        openTicketDetails(ticket);
+      }
+    }
+  }, [location.search, tickets]);
 
   if (loading) {
     return (
