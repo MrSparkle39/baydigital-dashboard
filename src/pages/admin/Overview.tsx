@@ -277,7 +277,21 @@ export default function AdminOverview() {
                       !notification.read ? "bg-accent/50" : "hover:bg-accent/30"
                     }`}
                     onClick={() => {
-                      if (notification.link) navigate(notification.link);
+                      // Deep-link ticket-related notifications to Admin Tickets page
+                      if (["ticket_reply","ticket_message","new_ticket","ticket_status"].includes((notification as any).type)) {
+                        const id = typeof (notification as any).link === 'string' ? (notification as any).link : undefined;
+                        navigate(id ? `/admin/tickets?ticket=${id}` : '/admin/tickets');
+                        return;
+                      }
+
+                      if ((notification as any).link) {
+                        if (typeof (notification as any).link === 'string' && (notification as any).link.startsWith('/')) {
+                          navigate((notification as any).link);
+                        } else {
+                          // If link is an ID or invalid path, default to tickets
+                          navigate('/admin/tickets');
+                        }
+                      }
                     }}
                   >
                     <div className="flex-1 space-y-1 min-w-0">
