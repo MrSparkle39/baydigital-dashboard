@@ -16,6 +16,7 @@ import { UserSitesManager } from "@/components/admin/UserSitesManager";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { format } from "date-fns";
+import JSZip from "jszip";
 
 type User = Database["public"]["Tables"]["users"]["Row"];
 type Ticket = Database["public"]["Tables"]["update_tickets"]["Row"] & {
@@ -371,6 +372,88 @@ export default function AdminUserDetail() {
                   <p className="mt-1 text-sm">{user.brand_colors ? JSON.stringify(user.brand_colors) : "Not set"}</p>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Onboarding Files</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {user.signup_files && (user.signup_files as string[]).length > 0 ? (
+                <>
+                  <div className="flex justify-between items-center">
+                    <p className="text-sm text-muted-foreground">{(user.signup_files as string[]).length} file(s)</p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={async () => {
+                        try {
+                          const zip = new JSZip();
+                          for (const url of user.signup_files as string[]) {
+                            const marker = "/onboarding-files/";
+                            const idx = url.indexOf(marker);
+                            const path = idx !== -1 ? url.substring(idx + marker.length) : url;
+                            const { data, error } = await supabase.storage.from("onboarding-files").download(path);
+                            if (error) throw error;
+                            const fileName = url.split("/").pop() || "file";
+                            zip.file(fileName, data);
+                          }
+                          const content = await zip.generateAsync({ type: "blob" });
+                          const a = document.createElement("a");
+                          a.href = URL.createObjectURL(content);
+                          a.download = `${(user.business_name || user.email || 'user').toString().replace(/[^a-z0-9-_]/gi,'_')}-onboarding-files.zip`;
+                          document.body.appendChild(a);
+                          a.click();
+                          a.remove();
+                        } catch (e) {
+                          console.error(e);
+                          toast.error("Failed to download all files");
+                        }
+                      }}
+                    >
+                      <Download className="h-4 w-4 mr-2" /> Download All
+                    </Button>
+                  </div>
+                  <div className="space-y-2">
+                    {(user.signup_files as string[]).map((url, idx) => {
+                      const fileName = url.split("/").pop() || `file-${idx + 1}`;
+                      return (
+                        <Button
+                          key={idx}
+                          variant="outline"
+                          size="sm"
+                          className="w-full justify-start"
+                          onClick={async () => {
+                            try {
+                              const marker = "/onboarding-files/";
+                              const i = url.indexOf(marker);
+                              const path = i !== -1 ? url.substring(i + marker.length) : url;
+                              const { data, error } = await supabase.storage.from("onboarding-files").download(path);
+                              if (error) throw error;
+                              const objectUrl = window.URL.createObjectURL(data);
+                              const link = document.createElement("a");
+                              link.href = objectUrl;
+                              link.download = fileName;
+                              document.body.appendChild(link);
+                              link.click();
+                              document.body.removeChild(link);
+                              window.URL.revokeObjectURL(objectUrl);
+                            } catch (err) {
+                              console.error(err);
+                              toast.error("Failed to download file");
+                            }
+                          }}
+                        >
+                          <Download className="h-4 w-4 mr-2" /> {fileName}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground">No files uploaded</p>
+              )}
             </CardContent>
           </Card>
 

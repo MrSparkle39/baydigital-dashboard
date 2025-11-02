@@ -200,7 +200,7 @@ export default function Onboarding() {
           monthly_goals: formData.monthlyGoals,
           
           // Technical
-          website_url: formData.existingDomain,
+          existing_domain: formData.existingDomain,
           existing_website: formData.existingWebsite,
           needs_email: formData.needsEmail,
           email_count: formData.emailCount,
