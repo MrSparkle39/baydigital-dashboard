@@ -19,6 +19,24 @@ export default function Notifications() {
   const [filteredNotifications, setFilteredNotifications] = useState<Notification[]>([]);
 
   useEffect(() => {
+    const checkOnboarding = async () => {
+      if (!user) return;
+      
+      const { data: userData } = await supabase
+        .from('users')
+        .select('onboarding_complete')
+        .eq('id', user.id)
+        .single();
+
+      if (userData && !userData.onboarding_complete) {
+        navigate("/onboarding", { replace: true });
+      }
+    };
+    
+    checkOnboarding();
+  }, [user, navigate]);
+
+  useEffect(() => {
     filterNotifications();
   }, [notifications, filter]);
 

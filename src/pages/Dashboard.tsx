@@ -111,6 +111,12 @@ const Dashboard = () => {
           console.error("Error fetching user data:", error);
           setUserData(null);
         } else if (data) {
+          // Check if onboarding is complete
+          if (!data.onboarding_complete) {
+            navigate("/onboarding", { replace: true });
+            return;
+          }
+
           setUserData(data);
           console.log("User data loaded:", data);
           

@@ -37,6 +37,18 @@ const Submissions = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      // Check if onboarding is complete
+      const { data: userData } = await supabase
+        .from('users')
+        .select('onboarding_complete')
+        .eq('id', user.id)
+        .single();
+
+      if (userData && !userData.onboarding_complete) {
+        navigate("/onboarding", { replace: true });
+        return;
+      }
+
       // Get user's sites first
       const { data: sites } = await supabase
         .from('sites')

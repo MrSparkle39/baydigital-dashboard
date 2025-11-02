@@ -408,6 +408,7 @@ export type Database = {
           needs_email: boolean | null
           newsletter_signup: boolean | null
           onboarding_complete: boolean | null
+          onboarding_step: number | null
           phone: string | null
           plan: Database["public"]["Enums"]["user_plan"]
           preferred_contact_method: string | null
@@ -470,6 +471,7 @@ export type Database = {
           needs_email?: boolean | null
           newsletter_signup?: boolean | null
           onboarding_complete?: boolean | null
+          onboarding_step?: number | null
           phone?: string | null
           plan?: Database["public"]["Enums"]["user_plan"]
           preferred_contact_method?: string | null
@@ -532,6 +534,7 @@ export type Database = {
           needs_email?: boolean | null
           newsletter_signup?: boolean | null
           onboarding_complete?: boolean | null
+          onboarding_step?: number | null
           phone?: string | null
           plan?: Database["public"]["Enums"]["user_plan"]
           preferred_contact_method?: string | null
