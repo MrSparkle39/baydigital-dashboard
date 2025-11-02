@@ -15,6 +15,7 @@ import SignupSuccess from "./pages/SignupSuccess";
 import Notifications from "./pages/Notifications";
 import NotFound from "./pages/NotFound";
 import Onboarding from "./pages/Onboarding";
+import SubscriptionRequired from "./pages/SubscriptionRequired";
 import AdminLayout from "./pages/admin/AdminLayout";
 import AdminOverview from "./pages/admin/Overview";
 import AdminUsers from "./pages/admin/Users";
@@ -38,6 +39,7 @@ const App = () => (
             <Route path="/success" element={<Success />} />
             <Route path="/signup-success" element={<SignupSuccess />} />
             <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
+            <Route path="/subscription-required" element={<ProtectedRoute><SubscriptionRequired /></ProtectedRoute>} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/submissions" element={<ProtectedRoute><Submissions /></ProtectedRoute>} />
             <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
