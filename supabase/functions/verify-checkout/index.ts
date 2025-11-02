@@ -55,6 +55,19 @@ serve(async (req) => {
 
     console.log('Checkout verified for user:', userData.email)
 
+    // Generate a session token for automatic login
+    const { data: sessionData, error: sessionError } = await supabaseAdmin.auth.admin.generateLink({
+      type: 'magiclink',
+      email: userData.email,
+    })
+
+    if (sessionError) {
+      console.error('Failed to generate session:', sessionError)
+      throw new Error('Failed to generate login session')
+    }
+
+    console.log('Session generated for user:', userData.email)
+
     // Send welcome email
     try {
       await supabaseAdmin.functions.invoke('send-email', {
@@ -74,11 +87,13 @@ serve(async (req) => {
       // Don't throw - we still want to complete the checkout verification
     }
 
-    // Return the user's email
+    // Return the session data and redirect URL
     return new Response(
       JSON.stringify({ 
         success: true,
-        email: userData.email
+        email: userData.email,
+        session: sessionData,
+        redirectUrl: '/onboarding'
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

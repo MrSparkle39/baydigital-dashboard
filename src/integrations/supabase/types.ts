@@ -376,109 +376,187 @@ export type Database = {
           additional_info: string | null
           billing_period_start: string | null
           brand_colors: Json | null
+          brand_style: string | null
           business_address: string | null
           business_description: string | null
           business_email: string | null
           business_hours: string | null
           business_name: string | null
+          business_objectives: string[] | null
           business_phone: string | null
+          business_size: string | null
+          certifications: string | null
+          competitor_analysis: string | null
+          competitor_websites: string | null
           content_pages: Json | null
           created_at: string | null
           domain: string | null
           email: string
+          email_count: number | null
+          emergency_phone: string | null
+          emergency_service: boolean | null
+          example_websites: string | null
+          existing_domain: string | null
+          existing_website: string | null
           full_name: string | null
           ga4_property_id: string | null
           id: string
           industry: string | null
           location: string | null
           logo_url: string | null
+          monthly_goals: string | null
+          needs_email: boolean | null
+          newsletter_signup: boolean | null
+          onboarding_complete: boolean | null
           phone: string | null
           plan: Database["public"]["Enums"]["user_plan"]
+          preferred_contact_method: string | null
           preview_url: string | null
+          pricing_strategy: string | null
+          service_area: string | null
           services: string | null
           signup_files: string[] | null
           social_media: Json | null
+          special_offers: string | null
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
           subscription_end_date: string | null
           subscription_start_date: string | null
           subscription_status: string | null
+          tagline: string | null
+          target_keywords: string | null
           tickets_used_this_period: number | null
+          top_services: string | null
+          unique_selling_points: string | null
           updated_at: string | null
+          website_features: Json | null
           website_status: string | null
           website_url: string | null
+          years_in_business: string | null
         }
         Insert: {
           additional_info?: string | null
           billing_period_start?: string | null
           brand_colors?: Json | null
+          brand_style?: string | null
           business_address?: string | null
           business_description?: string | null
           business_email?: string | null
           business_hours?: string | null
           business_name?: string | null
+          business_objectives?: string[] | null
           business_phone?: string | null
+          business_size?: string | null
+          certifications?: string | null
+          competitor_analysis?: string | null
+          competitor_websites?: string | null
           content_pages?: Json | null
           created_at?: string | null
           domain?: string | null
           email: string
+          email_count?: number | null
+          emergency_phone?: string | null
+          emergency_service?: boolean | null
+          example_websites?: string | null
+          existing_domain?: string | null
+          existing_website?: string | null
           full_name?: string | null
           ga4_property_id?: string | null
           id: string
           industry?: string | null
           location?: string | null
           logo_url?: string | null
+          monthly_goals?: string | null
+          needs_email?: boolean | null
+          newsletter_signup?: boolean | null
+          onboarding_complete?: boolean | null
           phone?: string | null
           plan?: Database["public"]["Enums"]["user_plan"]
+          preferred_contact_method?: string | null
           preview_url?: string | null
+          pricing_strategy?: string | null
+          service_area?: string | null
           services?: string | null
           signup_files?: string[] | null
           social_media?: Json | null
+          special_offers?: string | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           subscription_end_date?: string | null
           subscription_start_date?: string | null
           subscription_status?: string | null
+          tagline?: string | null
+          target_keywords?: string | null
           tickets_used_this_period?: number | null
+          top_services?: string | null
+          unique_selling_points?: string | null
           updated_at?: string | null
+          website_features?: Json | null
           website_status?: string | null
           website_url?: string | null
+          years_in_business?: string | null
         }
         Update: {
           additional_info?: string | null
           billing_period_start?: string | null
           brand_colors?: Json | null
+          brand_style?: string | null
           business_address?: string | null
           business_description?: string | null
           business_email?: string | null
           business_hours?: string | null
           business_name?: string | null
+          business_objectives?: string[] | null
           business_phone?: string | null
+          business_size?: string | null
+          certifications?: string | null
+          competitor_analysis?: string | null
+          competitor_websites?: string | null
           content_pages?: Json | null
           created_at?: string | null
           domain?: string | null
           email?: string
+          email_count?: number | null
+          emergency_phone?: string | null
+          emergency_service?: boolean | null
+          example_websites?: string | null
+          existing_domain?: string | null
+          existing_website?: string | null
           full_name?: string | null
           ga4_property_id?: string | null
           id?: string
           industry?: string | null
           location?: string | null
           logo_url?: string | null
+          monthly_goals?: string | null
+          needs_email?: boolean | null
+          newsletter_signup?: boolean | null
+          onboarding_complete?: boolean | null
           phone?: string | null
           plan?: Database["public"]["Enums"]["user_plan"]
+          preferred_contact_method?: string | null
           preview_url?: string | null
+          pricing_strategy?: string | null
+          service_area?: string | null
           services?: string | null
           signup_files?: string[] | null
           social_media?: Json | null
+          special_offers?: string | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           subscription_end_date?: string | null
           subscription_start_date?: string | null
           subscription_status?: string | null
+          tagline?: string | null
+          target_keywords?: string | null
           tickets_used_this_period?: number | null
+          top_services?: string | null
+          unique_selling_points?: string | null
           updated_at?: string | null
+          website_features?: Json | null
           website_status?: string | null
           website_url?: string | null
+          years_in_business?: string | null
         }
         Relationships: []
       }

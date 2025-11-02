@@ -28,14 +28,28 @@ const Success = () => {
         if (error) throw error;
 
         setEmail(data?.email || null);
+
+        // If we got session data, use it to log the user in
+        if (data?.session) {
+          const { error: authError } = await supabase.auth.setSession({
+            access_token: data.session.properties.access_token,
+            refresh_token: data.session.properties.refresh_token,
+          });
+
+          if (authError) {
+            console.error('Auth error:', authError);
+          } else {
+            // Redirect to onboarding after successful login
+            setTimeout(() => {
+              navigate('/onboarding');
+            }, 500);
+            return;
+          }
+        }
       } catch (err) {
         console.error('Verification error:', err);
       } finally {
         setVerifying(false);
-        // Redirect to external success page after email is triggered
-        setTimeout(() => {
-          window.location.href = 'https://bay.digital/success.html';
-        }, 1500);
       }
     };
 
