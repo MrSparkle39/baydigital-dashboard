@@ -66,6 +66,18 @@ export default function AdminUsers() {
                   <p className="font-medium">{user.email}</p>
                 </div>
                 <div>
+                  <p className="text-muted-foreground">Phone</p>
+                  <p className="font-medium">{user.business_phone || user.phone || "Not set"}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Industry</p>
+                  <p className="font-medium">{user.industry || "Not set"}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Location</p>
+                  <p className="font-medium">{user.location || "Not set"}</p>
+                </div>
+                <div>
                   <p className="text-muted-foreground">Status</p>
                   <Badge variant={user.subscription_status === "active" ? "default" : "outline"}>
                     {user.subscription_status || "pending"}
@@ -74,6 +86,12 @@ export default function AdminUsers() {
                 <div>
                   <p className="text-muted-foreground">Website</p>
                   <p className="font-medium">{user.website_status || "pending"}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Onboarding</p>
+                  <Badge variant={user.onboarding_complete ? "default" : "secondary"}>
+                    {user.onboarding_complete ? "Complete" : `Step ${user.onboarding_step || 0}/6`}
+                  </Badge>
                 </div>
                 <div>
                   <p className="text-muted-foreground">GA4 Property</p>

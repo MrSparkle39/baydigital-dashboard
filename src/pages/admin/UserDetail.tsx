@@ -269,14 +269,220 @@ export default function AdminUserDetail() {
                   <p className="mt-1">{user.industry || "Not set"}</p>
                 </div>
                 <div>
+                  <Label>Full Name</Label>
+                  <p className="mt-1">{user.full_name || "Not set"}</p>
+                </div>
+                <div>
                   <Label>Location</Label>
                   <p className="mt-1">{user.location || "Not set"}</p>
                 </div>
                 <div>
-                  <Label>Phone</Label>
+                  <Label>Business Phone</Label>
                   <p className="mt-1">{user.business_phone || "Not set"}</p>
                 </div>
+                <div>
+                  <Label>Personal Phone</Label>
+                  <p className="mt-1">{user.phone || "Not set"}</p>
+                </div>
+                <div>
+                  <Label>Business Email</Label>
+                  <p className="mt-1">{user.business_email || "Not set"}</p>
+                </div>
+                <div>
+                  <Label>Business Address</Label>
+                  <p className="mt-1">{user.business_address || "Not set"}</p>
+                </div>
+                <div className="col-span-2">
+                  <Label>Business Description</Label>
+                  <p className="mt-1 text-sm">{user.business_description || "Not set"}</p>
+                </div>
+                <div>
+                  <Label>Business Hours</Label>
+                  <p className="mt-1 text-sm whitespace-pre-wrap">{user.business_hours || "Not set"}</p>
+                </div>
+                <div>
+                  <Label>Service Area</Label>
+                  <p className="mt-1">{user.service_area || "Not set"}</p>
+                </div>
+                <div>
+                  <Label>Years in Business</Label>
+                  <p className="mt-1">{user.years_in_business || "Not set"}</p>
+                </div>
+                <div>
+                  <Label>Business Size</Label>
+                  <p className="mt-1">{user.business_size || "Not set"}</p>
+                </div>
               </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Services & Pricing</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label>Services Offered</Label>
+                <p className="mt-1 text-sm whitespace-pre-wrap">{user.services || "Not set"}</p>
+              </div>
+              <div>
+                <Label>Top Services</Label>
+                <p className="mt-1 text-sm">{user.top_services || "Not set"}</p>
+              </div>
+              <div>
+                <Label>Pricing Strategy</Label>
+                <p className="mt-1 text-sm">{user.pricing_strategy || "Not set"}</p>
+              </div>
+              <div>
+                <Label>Special Offers</Label>
+                <p className="mt-1 text-sm">{user.special_offers || "Not set"}</p>
+              </div>
+              <div>
+                <Label>Certifications</Label>
+                <p className="mt-1 text-sm">{user.certifications || "Not set"}</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Branding & Design</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Logo</Label>
+                  {user.logo_url ? (
+                    <img src={user.logo_url} alt="Business logo" className="mt-2 max-w-[200px] h-auto" />
+                  ) : (
+                    <p className="mt-1 text-muted-foreground">Not uploaded</p>
+                  )}
+                </div>
+                <div>
+                  <Label>Brand Style</Label>
+                  <p className="mt-1">{user.brand_style || "Not set"}</p>
+                </div>
+                <div>
+                  <Label>Tagline</Label>
+                  <p className="mt-1">{user.tagline || "Not set"}</p>
+                </div>
+                <div>
+                  <Label>Brand Colors</Label>
+                  <p className="mt-1 text-sm">{user.brand_colors ? JSON.stringify(user.brand_colors) : "Not set"}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Website Features & Content</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Content Pages</Label>
+                  <p className="mt-1 text-sm">{user.content_pages ? JSON.stringify(user.content_pages) : "Not set"}</p>
+                </div>
+                <div>
+                  <Label>Website Features</Label>
+                  <p className="mt-1 text-sm">{user.website_features ? JSON.stringify(user.website_features) : "Not set"}</p>
+                </div>
+                <div>
+                  <Label>Newsletter Signup</Label>
+                  <Badge variant={user.newsletter_signup ? "default" : "secondary"}>
+                    {user.newsletter_signup ? "Yes" : "No"}
+                  </Badge>
+                </div>
+                <div>
+                  <Label>Needs Email</Label>
+                  <Badge variant={user.needs_email ? "default" : "secondary"}>
+                    {user.needs_email ? `Yes (${user.email_count || 1})` : "No"}
+                  </Badge>
+                </div>
+                <div>
+                  <Label>Emergency Service</Label>
+                  <Badge variant={user.emergency_service ? "default" : "secondary"}>
+                    {user.emergency_service ? "Yes" : "No"}
+                  </Badge>
+                </div>
+                <div>
+                  <Label>Emergency Phone</Label>
+                  <p className="mt-1">{user.emergency_phone || "Not set"}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>SEO & Marketing</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label>Target Keywords</Label>
+                <p className="mt-1 text-sm">{user.target_keywords || "Not set"}</p>
+              </div>
+              <div>
+                <Label>Unique Selling Points</Label>
+                <p className="mt-1 text-sm whitespace-pre-wrap">{user.unique_selling_points || "Not set"}</p>
+              </div>
+              <div>
+                <Label>Monthly Goals</Label>
+                <p className="mt-1 text-sm">{user.monthly_goals || "Not set"}</p>
+              </div>
+              <div>
+                <Label>Competitor Websites</Label>
+                <p className="mt-1 text-sm whitespace-pre-wrap">{user.competitor_websites || "Not set"}</p>
+              </div>
+              <div>
+                <Label>Competitor Analysis</Label>
+                <p className="mt-1 text-sm whitespace-pre-wrap">{user.competitor_analysis || "Not set"}</p>
+              </div>
+              <div>
+                <Label>Example Websites</Label>
+                <p className="mt-1 text-sm">{user.example_websites || "Not set"}</p>
+              </div>
+              <div>
+                <Label>Social Media</Label>
+                <p className="mt-1 text-sm">{user.social_media ? JSON.stringify(user.social_media) : "Not set"}</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Domain & Technical</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Existing Website</Label>
+                  <p className="mt-1">{user.existing_website || "None"}</p>
+                </div>
+                <div>
+                  <Label>Existing Domain</Label>
+                  <p className="mt-1">{user.existing_domain || "None"}</p>
+                </div>
+                <div>
+                  <Label>Preferred Domain</Label>
+                  <p className="mt-1">{user.domain || "Not set"}</p>
+                </div>
+                <div>
+                  <Label>Preferred Contact Method</Label>
+                  <p className="mt-1">{user.preferred_contact_method || "Not set"}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Additional Information</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Label>Additional Notes</Label>
+              <p className="mt-1 text-sm whitespace-pre-wrap">{user.additional_info || "None provided"}</p>
             </CardContent>
           </Card>
         </TabsContent>
