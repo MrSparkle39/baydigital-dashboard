@@ -55,6 +55,29 @@ serve(async (req) => {
 
     console.log('Checkout verified for user:', userData.email)
 
+    // Update subscription status based on Stripe session
+    if (session.subscription) {
+      const subscription = await stripe.subscriptions.retrieve(session.subscription as string)
+      
+      console.log('Updating subscription status:', subscription.status)
+      
+      const { error: updateError } = await supabaseAdmin
+        .from('users')
+        .update({
+          subscription_status: subscription.status === 'active' || subscription.status === 'trialing' ? 'active' : subscription.status,
+          stripe_customer_id: session.customer as string,
+          stripe_subscription_id: subscription.id,
+          subscription_start_date: new Date(subscription.created * 1000).toISOString(),
+        })
+        .eq('id', userId)
+
+      if (updateError) {
+        console.error('Failed to update subscription status:', updateError)
+      } else {
+        console.log('Subscription status updated successfully')
+      }
+    }
+
     // Generate a session token for automatic login
     const { data: sessionData, error: sessionError } = await supabaseAdmin.auth.admin.generateLink({
       type: 'magiclink',

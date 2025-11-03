@@ -12,6 +12,7 @@ const SubscriptionRequired = () => {
   const navigate = useNavigate();
   const [userData, setUserData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -30,10 +31,49 @@ const SubscriptionRequired = () => {
     fetchUserData();
   }, [user]);
 
+  const handleSyncStatus = async () => {
+    try {
+      setSyncing(true);
+      const { data, error } = await supabase.functions.invoke('sync-subscription');
+
+      if (error) throw error;
+
+      // Refresh user data
+      const { data: updatedData } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', user?.id)
+        .single();
+
+      setUserData(updatedData);
+
+      // If status is now active, redirect to dashboard
+      if (updatedData?.subscription_status === 'active' || updatedData?.subscription_status === 'trialing') {
+        navigate('/dashboard');
+      }
+    } catch (error) {
+      console.error('Error syncing subscription:', error);
+      alert("Failed to sync subscription status. Please try again or contact support.");
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const handleManageBilling = async () => {
-    // TODO: Implement Stripe customer portal redirect
-    // For now, show a message
-    alert("Billing management will be implemented soon. Please contact support@bay.digital");
+    try {
+      const { data, error } = await supabase.functions.invoke('create-portal-session', {
+        body: { returnUrl: window.location.origin + '/subscription-required' }
+      });
+
+      if (error) throw error;
+
+      if (data?.url) {
+        window.location.href = data.url;
+      }
+    } catch (error) {
+      console.error('Error creating portal session:', error);
+      alert("Failed to open billing portal. Please contact support@bay.digital");
+    }
   };
 
   if (loading) {
@@ -102,6 +142,16 @@ const SubscriptionRequired = () => {
           )}
 
           <div className="space-y-2">
+            <Button 
+              onClick={handleSyncStatus}
+              className="w-full"
+              size="lg"
+              variant="secondary"
+              disabled={syncing}
+            >
+              {syncing ? 'Syncing...' : 'Refresh Payment Status'}
+            </Button>
+
             <Button 
               onClick={handleManageBilling} 
               className="w-full"
