@@ -76,7 +76,27 @@ serve(async (req) => {
 
         console.log('User activated:', userId, 'Status:', mappedStatus, 'Next billing:', new Date(subscription.current_period_end * 1000).toISOString())
 
-        // TODO: Send welcome email with login credentials
+        // Get user details for email
+        const { data: userDetails } = await supabaseAdmin
+          .from('users')
+          .select('email, full_name')
+          .eq('id', userId)
+          .single()
+
+        if (userDetails) {
+          // Send welcome email
+          await supabaseAdmin.functions.invoke('send-email', {
+            body: {
+              type: 'welcome',
+              to: userDetails.email,
+              data: {
+                userName: userDetails.full_name || 'there',
+                userEmail: userDetails.email,
+                dashboardUrl: 'https://dashboard.bay.digital'
+              }
+            }
+          })
+        }
         
         break
       }
@@ -150,6 +170,27 @@ serve(async (req) => {
         }
 
         console.log('Subscription cancelled for user:', userId)
+        
+        // Get user details for email
+        const { data: cancelledUser } = await supabaseAdmin
+          .from('users')
+          .select('email, full_name')
+          .eq('id', userId)
+          .single()
+
+        if (cancelledUser) {
+          // Send subscription cancelled email to user
+          await supabaseAdmin.functions.invoke('send-email', {
+            body: {
+              type: 'subscription_cancelled_user',
+              to: cancelledUser.email,
+              data: {
+                userName: cancelledUser.full_name || cancelledUser.email
+              }
+            }
+          })
+        }
+        
         break
       }
 
@@ -186,7 +227,19 @@ serve(async (req) => {
 
         console.log('Payment failed for user:', userData.id)
         
-        // TODO: Send payment failed email
+        // Send payment failed email
+        await supabaseAdmin.functions.invoke('send-email', {
+          body: {
+            type: 'payment_failed',
+            to: userData.email,
+            data: {
+              userName: userData.email,
+              paymentAmount: `$${(invoice.amount_due / 100).toFixed(2)} ${invoice.currency.toUpperCase()}`,
+              cardLast4: invoice.charge?.payment_method_details?.card?.last4 || '****'
+            }
+          }
+        })
+        
         break
       }
 

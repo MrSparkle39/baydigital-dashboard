@@ -10,7 +10,7 @@ const corsHeaders = {
 interface EmailRequest {
   type: 'ticket_confirmation' | 'admin_notification' | 'ticket_update' | 'welcome' | 'ticket_reply' | 'ticket_reply_admin' | 
         'new_user_admin' | 'onboarding_complete_admin' | 'site_ready_review' | 'site_launched' | 
-        'onboarding_reminder_24h' | 'onboarding_reminder_72h' | 'payment_failed' | 'subscription_cancelled';
+        'onboarding_reminder_24h' | 'onboarding_reminder_72h' | 'payment_failed' | 'subscription_cancelled' | 'subscription_cancelled_user';
   to: string;
   data: {
     ticketTitle?: string;
@@ -709,6 +709,41 @@ serve(async (req) => {
                   View in Admin Dashboard →
                 </a>
               </div>
+            </div>
+          </div>
+        `;
+        break;
+
+      case 'subscription_cancelled_user':
+        subject = `Your Bay Digital Subscription Has Been Cancelled`;
+        html = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px 20px; text-align: center;">
+              <h1 style="color: white; margin: 0;">Subscription Cancelled</h1>
+            </div>
+            <div style="padding: 30px; background: #f9f9f9;">
+              <p>Hi ${data.userName},</p>
+              <p>We're sorry to see you go! Your Bay Digital subscription has been cancelled.</p>
+              <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #667eea;">
+                <h3 style="margin: 0 0 15px 0; color: #333;">What This Means:</h3>
+                <ul style="margin: 0; padding-left: 20px; color: #555;">
+                  <li style="margin-bottom: 10px;">Your website will remain live until the end of your current billing period</li>
+                  <li style="margin-bottom: 10px;">You'll no longer be charged for future billing cycles</li>
+                  <li style="margin-bottom: 10px;">You can reactivate anytime by updating your subscription</li>
+                </ul>
+              </div>
+              <div style="background: #e8f4f8; padding: 15px; border-radius: 6px; margin: 20px 0;">
+                <p style="margin: 0; font-size: 14px; color: #0066cc;">
+                  💡 <strong>Changed your mind?</strong> You can reactivate your subscription anytime from your dashboard.
+                </p>
+              </div>
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="https://dashboard.bay.digital/subscription-required" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: 600;">
+                  Reactivate Subscription →
+                </a>
+              </div>
+              <p style="font-size: 14px; color: #666;">We'd love to hear your feedback. Reply to this email to let us know how we can improve.</p>
+              <p>Best regards,<br><strong>The Bay Digital Team</strong></p>
             </div>
           </div>
         `;
