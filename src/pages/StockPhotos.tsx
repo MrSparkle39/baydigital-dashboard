@@ -28,9 +28,9 @@ export default function StockPhotos() {
   const [downloading, setDownloading] = useState<string | null>(null);
   const [usage, setUsage] = useState({ used: 0, limit: 0, remaining: 0 });
   const [filters, setFilters] = useState({
-    type: "",
-    orientation: "",
-    license: "",
+    type: "all",
+    orientation: "all",
+    license: "all",
   });
 
   useEffect(() => {
@@ -55,11 +55,17 @@ export default function StockPhotos() {
 
     setLoading(true);
     try {
+      const cleanFilters = {
+        type: filters.type !== "all" ? filters.type : undefined,
+        orientation: filters.orientation !== "all" ? filters.orientation : undefined,
+        license: filters.license !== "all" ? filters.license : undefined,
+      };
+
       const { data, error } = await supabase.functions.invoke('freepik-api', {
         body: {
           action: 'search',
           query: searchQuery,
-          filters,
+          filters: cleanFilters,
         },
       });
 
@@ -151,7 +157,7 @@ export default function StockPhotos() {
                 <SelectValue placeholder="Content Type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Types</SelectItem>
+                <SelectItem value="all">All Types</SelectItem>
                 <SelectItem value="photo">Photos</SelectItem>
                 <SelectItem value="vector">Vectors</SelectItem>
                 <SelectItem value="icon">Icons</SelectItem>
@@ -163,7 +169,7 @@ export default function StockPhotos() {
                 <SelectValue placeholder="Orientation" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Any</SelectItem>
+                <SelectItem value="all">Any</SelectItem>
                 <SelectItem value="horizontal">Horizontal</SelectItem>
                 <SelectItem value="vertical">Vertical</SelectItem>
                 <SelectItem value="square">Square</SelectItem>
@@ -175,7 +181,7 @@ export default function StockPhotos() {
                 <SelectValue placeholder="License" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Licenses</SelectItem>
+                <SelectItem value="all">All Licenses</SelectItem>
                 <SelectItem value="free">Free</SelectItem>
                 <SelectItem value="premium">Premium</SelectItem>
               </SelectContent>
