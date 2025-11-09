@@ -9,6 +9,9 @@ verify_jwt = false
 [functions.fetch-ga4-analytics]
 verify_jwt = true
 
+[functions.freepik-api]
+verify_jwt = true
+
 [functions.submit-contact-form]
 verify_jwt = false
 
