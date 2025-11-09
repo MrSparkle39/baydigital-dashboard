@@ -399,6 +399,8 @@ export type Database = {
           example_websites: string | null
           existing_domain: string | null
           existing_website: string | null
+          freepik_downloads_used: number | null
+          freepik_period_start: string | null
           full_name: string | null
           ga4_property_id: string | null
           id: string
@@ -463,6 +465,8 @@ export type Database = {
           example_websites?: string | null
           existing_domain?: string | null
           existing_website?: string | null
+          freepik_downloads_used?: number | null
+          freepik_period_start?: string | null
           full_name?: string | null
           ga4_property_id?: string | null
           id: string
@@ -527,6 +531,8 @@ export type Database = {
           example_websites?: string | null
           existing_domain?: string | null
           existing_website?: string | null
+          freepik_downloads_used?: number | null
+          freepik_period_start?: string | null
           full_name?: string | null
           ga4_property_id?: string | null
           id?: string
@@ -616,7 +622,16 @@ export type Database = {
     }
     Functions: {
       can_create_ticket: { Args: { user_id: string }; Returns: boolean }
+      can_download_freepik: { Args: { user_id: string }; Returns: boolean }
+      check_and_reset_freepik_downloads: {
+        Args: { user_id: string }
+        Returns: undefined
+      }
       check_and_reset_tickets: { Args: { user_id: string }; Returns: undefined }
+      get_freepik_limit: {
+        Args: { user_plan: Database["public"]["Enums"]["user_plan"] }
+        Returns: number
+      }
       get_ticket_limit: {
         Args: { user_plan: Database["public"]["Enums"]["user_plan"] }
         Returns: number
