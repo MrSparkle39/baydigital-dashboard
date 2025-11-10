@@ -37,9 +37,12 @@ serve(async (req) => {
         
         let url = `https://api.freepik.com/v1/resources?term=${encodeURIComponent(query)}&page=${page}&limit=${limit}`;
         
-        if (filters.type) url += `&filters[content_type]=${filters.type}`;
-        if (filters.orientation) url += `&filters[orientation]=${filters.orientation}`;
-        if (filters.license) url += `&filters[license]=${filters.license}`;
+        // Use simpler filter format without brackets
+        if (filters.type && filters.type !== 'all') url += `&content_type=${filters.type}`;
+        if (filters.orientation && filters.orientation !== 'all') url += `&orientation=${filters.orientation}`;
+        if (filters.license && filters.license !== 'all') url += `&license=${filters.license}`;
+
+        console.log('Freepik API request URL:', url);
 
         const response = await fetch(url, {
           headers: {
@@ -49,7 +52,9 @@ serve(async (req) => {
         });
 
         if (!response.ok) {
-          throw new Error(`Freepik API error: ${response.status}`);
+          const errorText = await response.text();
+          console.error('Freepik API error response:', errorText);
+          throw new Error(`Freepik API error: ${response.status} - ${errorText}`);
         }
 
         const data = await response.json();

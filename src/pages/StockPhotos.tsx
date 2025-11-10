@@ -71,10 +71,11 @@ export default function StockPhotos() {
 
       if (error) throw error;
       setResults(data.data || []);
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Search error:', error);
       toast({
         title: "Search failed",
-        description: error.message,
+        description: error?.message || "Please try again with different search terms or filters.",
         variant: "destructive",
       });
     } finally {
