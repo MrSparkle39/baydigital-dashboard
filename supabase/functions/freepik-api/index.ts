@@ -35,12 +35,27 @@ serve(async (req) => {
       case 'search': {
         const { query, page = 1, limit = 20, filters = {} } = params;
         
-        let url = `https://api.freepik.com/v1/resources?term=${encodeURIComponent(query)}&page=${page}&limit=${limit}`;
+        // Use different endpoints for different content types
+        let url;
+        if (filters.type === 'icon') {
+          // Icons have a separate endpoint
+          url = `https://api.freepik.com/v1/icons?term=${encodeURIComponent(query)}&page=${page}&limit=${limit}`;
+        } else {
+          url = `https://api.freepik.com/v1/resources?term=${encodeURIComponent(query)}&page=${page}&limit=${limit}`;
+          
+          // Only add content_type filter for resources endpoint (not icons)
+          if (filters.type && filters.type !== 'all' && filters.type !== 'icon') {
+            url += `&filters[content_type]=${filters.type}`;
+          }
+        }
         
-        // Use simpler filter format without brackets
-        if (filters.type && filters.type !== 'all') url += `&content_type=${filters.type}`;
-        if (filters.orientation && filters.orientation !== 'all') url += `&orientation=${filters.orientation}`;
-        if (filters.license && filters.license !== 'all') url += `&license=${filters.license}`;
+        // Add common filters
+        if (filters.orientation && filters.orientation !== 'all') {
+          url += `&filters[orientation]=${filters.orientation}`;
+        }
+        if (filters.license && filters.license !== 'all') {
+          url += `&filters[license]=${filters.license}`;
+        }
 
         console.log('Freepik API request URL:', url);
 

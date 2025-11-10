@@ -70,9 +70,17 @@ export default function StockPhotos() {
       });
 
       if (error) throw error;
-      setResults(data.data || []);
+      
+      // Handle the response data safely
+      if (data && Array.isArray(data.data)) {
+        setResults(data.data);
+      } else {
+        console.warn('Unexpected response format:', data);
+        setResults([]);
+      }
     } catch (error: any) {
       console.error('Search error:', error);
+      setResults([]); // Clear results on error
       toast({
         title: "Search failed",
         description: error?.message || "Please try again with different search terms or filters.",
