@@ -11,12 +11,12 @@ import { Badge } from "@/components/ui/badge";
 
 interface FreepikImage {
   id: string;
-  title: string;
-  thumbnail: { url: string };
-  preview: { url: string };
-  image: { source: { url: string } };
-  license: string;
-  author: { name: string };
+  title?: string;
+  thumbnail?: { url?: string };
+  preview?: { url?: string };
+  image?: { source?: { url?: string } };
+  license?: string;
+  author?: { name?: string };
 }
 
 export default function StockPhotos() {
@@ -101,13 +101,25 @@ export default function StockPhotos() {
       return;
     }
 
+    // Safely determine a download URL from available image fields
+    const downloadUrl = image.preview?.url || image.image?.source?.url || image.thumbnail?.url;
+
+    if (!downloadUrl) {
+      toast({
+        title: "Download unavailable",
+        description: "We couldn't find a valid image URL for this asset.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setDownloading(image.id);
     try {
       const { data, error } = await supabase.functions.invoke('freepik-api', {
         body: {
           action: 'download',
           resourceId: image.id,
-          imageUrl: image.preview.url,
+          imageUrl: downloadUrl,
         },
       });
 
@@ -115,14 +127,14 @@ export default function StockPhotos() {
 
       toast({
         title: "Download successful",
-        description: `${image.title} has been added to your website assets.`,
+        description: `${image.title || 'Image'} has been added to your website assets.`,
       });
 
       await fetchUsage();
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Download failed",
-        description: error.message,
+        description: error?.message || "Something went wrong while downloading this image.",
         variant: "destructive",
       });
     } finally {
@@ -212,8 +224,8 @@ export default function StockPhotos() {
             <Card key={image.id} className="overflow-hidden group">
               <div className="aspect-square relative overflow-hidden bg-muted">
                 <img
-                  src={image.thumbnail.url}
-                  alt={image.title}
+                  src={image.thumbnail?.url || image.preview?.url || image.image?.source?.url || ""}
+                  alt={image.title || "Stock image"}
                   className="w-full h-full object-cover transition-transform group-hover:scale-105"
                 />
                 <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
@@ -232,10 +244,10 @@ export default function StockPhotos() {
                 </div>
               </div>
               <div className="p-3">
-                <p className="text-sm font-medium truncate">{image.title}</p>
-                <p className="text-xs text-muted-foreground">by {image.author.name}</p>
+                <p className="text-sm font-medium truncate">{image.title || "Untitled image"}</p>
+                <p className="text-xs text-muted-foreground">by {image.author?.name || "Unknown author"}</p>
                 <Badge variant="outline" className="mt-2">
-                  {image.license}
+                  {image.license || "Unknown license"}
                 </Badge>
               </div>
             </Card>
