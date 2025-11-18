@@ -43,18 +43,18 @@ serve(async (req) => {
         } else {
           url = `https://api.freepik.com/v1/resources?term=${encodeURIComponent(query)}&page=${page}&limit=${limit}`;
           
-          // Only add content_type filter for resources endpoint (not icons)
+          // Freepik API requires filters to be arrays - add [] to make them arrays
           if (filters.type && filters.type !== 'all' && filters.type !== 'icon') {
-            url += `&filters[content_type]=${filters.type}`;
+            url += `&filters[content_type][]=${filters.type}`;
           }
         }
         
-        // Add common filters
+        // Add common filters as arrays
         if (filters.orientation && filters.orientation !== 'all') {
-          url += `&filters[orientation]=${filters.orientation}`;
+          url += `&filters[orientation][]=${filters.orientation}`;
         }
         if (filters.license && filters.license !== 'all') {
-          url += `&filters[license]=${filters.license}`;
+          url += `&filters[license][]=${filters.license}`;
         }
 
         console.log('Freepik API request URL:', url);
