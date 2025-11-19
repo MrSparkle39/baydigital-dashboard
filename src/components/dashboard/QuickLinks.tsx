@@ -5,9 +5,9 @@ import { Link } from "react-router-dom";
 export const QuickLinks = () => {
   const links = [
     { icon: Image, label: "Stock Photos", href: "/stock-photos", isLink: true },
-    { icon: BookOpen, label: "Help Center", href: "#", isLink: false },
-    { icon: Mail, label: "Contact Us", href: "#", isLink: false },
-    { icon: Share2, label: "Share Your Site", href: "#", isLink: false },
+    { icon: BookOpen, label: "Help Center", href: "/help-center", isLink: true },
+    { icon: Mail, label: "Contact Us", href: "/contact-us", isLink: true },
+    { icon: Share2, label: "Share Your Site", href: "/share-your-site", isLink: true },
   ];
 
   return (
