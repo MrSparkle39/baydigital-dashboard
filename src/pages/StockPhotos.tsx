@@ -27,10 +27,11 @@ export default function StockPhotos() {
   const [loading, setLoading] = useState(false);
   const [downloading, setDownloading] = useState<string | null>(null);
   const [usage, setUsage] = useState({ used: 0, limit: 0, remaining: 0 });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
   const [filters, setFilters] = useState({
     type: "all",
     orientation: "all",
-    license: "all",
   });
 
   useEffect(() => {
@@ -50,21 +51,24 @@ export default function StockPhotos() {
     }
   };
 
-  const handleSearch = async () => {
+  const handleSearch = async (loadMore = false) => {
     if (!searchQuery.trim()) return;
 
     setLoading(true);
     try {
+      const pageToLoad = loadMore ? currentPage + 1 : 1;
+      
       const cleanFilters = {
         type: filters.type !== "all" ? filters.type : undefined,
         orientation: filters.orientation !== "all" ? filters.orientation : undefined,
-        license: filters.license !== "all" ? filters.license : undefined,
       };
 
       const { data, error } = await supabase.functions.invoke('freepik-api', {
         body: {
           action: 'search',
           query: searchQuery,
+          page: pageToLoad,
+          limit: 20,
           filters: cleanFilters,
         },
       });
@@ -73,14 +77,23 @@ export default function StockPhotos() {
       
       // Handle the response data safely
       if (data && Array.isArray(data.data)) {
-        setResults(data.data);
+        if (loadMore) {
+          setResults(prev => [...prev, ...data.data]);
+        } else {
+          setResults(data.data);
+        }
+        setCurrentPage(pageToLoad);
+        // Check if there are more results (if we got a full page of 20, there might be more)
+        setHasMore(data.data.length === 20);
       } else {
         console.warn('Unexpected response format:', data);
-        setResults([]);
+        if (!loadMore) setResults([]);
+        setHasMore(false);
       }
     } catch (error: any) {
       console.error('Search error:', error);
-      setResults([]); // Clear results on error
+      if (!loadMore) setResults([]); // Clear results on error only for new searches
+      setHasMore(false);
       toast({
         title: "Search failed",
         description: error?.message || "Please try again with different search terms or filters.",
@@ -166,13 +179,13 @@ export default function StockPhotos() {
               onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
               className="flex-1"
             />
-            <Button onClick={handleSearch} disabled={loading}>
+            <Button onClick={() => handleSearch()} disabled={loading}>
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
               Search
             </Button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Select value={filters.type} onValueChange={(value) => setFilters({ ...filters, type: value })}>
               <SelectTrigger>
                 <SelectValue placeholder="Content Type" />
@@ -196,17 +209,6 @@ export default function StockPhotos() {
                 <SelectItem value="square">Square</SelectItem>
               </SelectContent>
             </Select>
-
-            <Select value={filters.license} onValueChange={(value) => setFilters({ ...filters, license: value })}>
-              <SelectTrigger>
-                <SelectValue placeholder="License" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Licenses</SelectItem>
-                <SelectItem value="free">Free</SelectItem>
-                <SelectItem value="premium">Premium</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
         </div>
       </Card>
@@ -219,8 +221,9 @@ export default function StockPhotos() {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {results.map((image) => (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {results.map((image) => (
             <Card key={image.id} className="overflow-hidden group">
               <div className="aspect-square relative overflow-hidden bg-muted">
                 <img
@@ -250,9 +253,23 @@ export default function StockPhotos() {
                   {image.license || "Unknown license"}
                 </Badge>
               </div>
-            </Card>
-          ))}
-        </div>
+              </Card>
+            ))}
+          </div>
+          
+          {hasMore && (
+            <div className="flex justify-center mt-8">
+              <Button 
+                onClick={() => handleSearch(true)} 
+                disabled={loading}
+                variant="outline"
+              >
+                {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                Load More
+              </Button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

@@ -37,8 +37,11 @@ serve(async (req) => {
         
         // Use different endpoints for different content types
         let url;
+        let isIconSearch = false;
+        
         if (filters.type === 'icon') {
           // Icons have a separate endpoint
+          isIconSearch = true;
           url = `https://api.freepik.com/v1/icons?term=${encodeURIComponent(query)}&page=${page}&limit=${limit}`;
         } else {
           url = `https://api.freepik.com/v1/resources?term=${encodeURIComponent(query)}&page=${page}&limit=${limit}`;
@@ -47,14 +50,11 @@ serve(async (req) => {
           if (filters.type && filters.type !== 'all' && filters.type !== 'icon') {
             url += `&filters[content_type][]=${filters.type}`;
           }
-        }
-        
-        // Add common filters as arrays
-        if (filters.orientation && filters.orientation !== 'all') {
-          url += `&filters[orientation][]=${filters.orientation}`;
-        }
-        if (filters.license && filters.license !== 'all') {
-          url += `&filters[license][]=${filters.license}`;
+          
+          // Add orientation filter only for non-icon searches
+          if (filters.orientation && filters.orientation !== 'all') {
+            url += `&filters[orientation][]=${filters.orientation}`;
+          }
         }
 
         console.log('Freepik API request URL:', url);
@@ -73,6 +73,29 @@ serve(async (req) => {
         }
 
         const data = await response.json();
+        
+        // Normalize icon data to match photo/vector structure
+        if (isIconSearch && data.data) {
+          data.data = data.data.map((icon: any) => ({
+            id: icon.id || String(Math.random()),
+            title: icon.description || 'Icon',
+            thumbnail: {
+              url: icon.thumbnails?.[0]?.url || icon.images?.[0]?.source?.url
+            },
+            preview: {
+              url: icon.images?.[0]?.source?.url || icon.thumbnails?.[0]?.url
+            },
+            image: {
+              source: {
+                url: icon.images?.[0]?.source?.url || icon.thumbnails?.[0]?.url
+              }
+            },
+            license: 'freepik',
+            author: {
+              name: icon.author?.username || 'Freepik'
+            }
+          }));
+        }
         
         return new Response(JSON.stringify(data), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
