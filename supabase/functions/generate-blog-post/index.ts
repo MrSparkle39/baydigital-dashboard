@@ -471,10 +471,32 @@ Do not include any text outside the JSON object.`
     }
 
     const claudeData = await claudeResponse.json()
-    const content = claudeData.content[0].text
+    let content = claudeData?.content?.[0]?.text as string
 
-    // Parse the JSON response
-    const blogData = JSON.parse(content)
+    if (!content || typeof content !== 'string') {
+      throw new Error('Claude response missing text content')
+    }
+
+    // Claude sometimes wraps JSON in ```json fences; strip them before parsing
+    let jsonText = content.trim()
+    if (jsonText.startsWith('```')) {
+      const firstBrace = jsonText.indexOf('{')
+      const lastBrace = jsonText.lastIndexOf('}')
+      if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+        jsonText = jsonText.slice(firstBrace, lastBrace + 1)
+      }
+    }
+
+    let blogData
+    try {
+      blogData = JSON.parse(jsonText)
+    } catch (parseError) {
+      console.error('Failed to parse Claude JSON:', {
+        error: parseError instanceof Error ? parseError.message : String(parseError),
+        snippet: jsonText.slice(0, 200),
+      })
+      throw new Error('Failed to parse AI response. Please try again.')
+    }
     
     // Generate slug
     const slug = slugify(blogData.title)
