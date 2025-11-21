@@ -20,6 +20,7 @@ import StockPhotos from "./pages/StockPhotos";
 import HelpCenter from "./pages/HelpCenter";
 import ContactUs from "./pages/ContactUs";
 import ShareYourSite from "./pages/ShareYourSite";
+import BlogMaker from "./pages/BlogMaker";
 import AdminLayout from "./pages/admin/AdminLayout";
 import AdminOverview from "./pages/admin/Overview";
 import AdminUsers from "./pages/admin/Users";
@@ -51,6 +52,7 @@ const App = () => (
             <Route path="/help-center" element={<ProtectedRoute><HelpCenter /></ProtectedRoute>} />
             <Route path="/contact-us" element={<ProtectedRoute><ContactUs /></ProtectedRoute>} />
             <Route path="/share-your-site" element={<ProtectedRoute><ShareYourSite /></ProtectedRoute>} />
+            <Route path="/blogmaker" element={<ProtectedRoute><BlogMaker /></ProtectedRoute>} />
             <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
               <Route index element={<AdminOverview />} />
               <Route path="users" element={<AdminUsers />} />

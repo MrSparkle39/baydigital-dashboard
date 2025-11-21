@@ -1,9 +1,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BookOpen, Mail, Image, Share2 } from "lucide-react";
+import { BookOpen, Mail, Image, Share2, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
 
 export const QuickLinks = () => {
   const links = [
+    { icon: Sparkles, label: "Blog Maker", href: "/blogmaker", isLink: true },
     { icon: Image, label: "Stock Photos", href: "/stock-photos", isLink: true },
     { icon: BookOpen, label: "Help Center", href: "/help-center", isLink: true },
     { icon: Mail, label: "Contact Us", href: "/contact-us", isLink: true },
