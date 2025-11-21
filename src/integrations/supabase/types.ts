@@ -55,6 +55,81 @@ export type Database = {
           },
         ]
       }
+      blogmaker_posts: {
+        Row: {
+          body_html: string
+          created_at: string | null
+          id: string
+          keywords: string[] | null
+          language: string
+          meta_description: string | null
+          meta_title: string | null
+          published_at: string | null
+          published_url: string | null
+          site_id: string
+          slug: string
+          status: Database["public"]["Enums"]["blog_post_status"] | null
+          title: string
+          tone: string
+          topic: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          body_html: string
+          created_at?: string | null
+          id?: string
+          keywords?: string[] | null
+          language?: string
+          meta_description?: string | null
+          meta_title?: string | null
+          published_at?: string | null
+          published_url?: string | null
+          site_id: string
+          slug: string
+          status?: Database["public"]["Enums"]["blog_post_status"] | null
+          title: string
+          tone?: string
+          topic: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          body_html?: string
+          created_at?: string | null
+          id?: string
+          keywords?: string[] | null
+          language?: string
+          meta_description?: string | null
+          meta_title?: string | null
+          published_at?: string | null
+          published_url?: string | null
+          site_id?: string
+          slug?: string
+          status?: Database["public"]["Enums"]["blog_post_status"] | null
+          title?: string
+          tone?: string
+          topic?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blogmaker_posts_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "blogmaker_posts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       change_requests: {
         Row: {
           completed_at: string | null
@@ -181,6 +256,7 @@ export type Database = {
           id: string
           last_updated: string | null
           launched_date: string | null
+          netlify_site_id: string | null
           site_name: string
           site_url: string
           status: Database["public"]["Enums"]["site_status"]
@@ -191,6 +267,7 @@ export type Database = {
           id?: string
           last_updated?: string | null
           launched_date?: string | null
+          netlify_site_id?: string | null
           site_name: string
           site_url: string
           status?: Database["public"]["Enums"]["site_status"]
@@ -201,6 +278,7 @@ export type Database = {
           id?: string
           last_updated?: string | null
           launched_date?: string | null
+          netlify_site_id?: string | null
           site_name?: string
           site_url?: string
           status?: Database["public"]["Enums"]["site_status"]
@@ -655,6 +733,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "user"
+      blog_post_status: "draft" | "published" | "failed"
       request_status: "pending" | "in_progress" | "completed"
       site_status: "live" | "building" | "maintenance"
       submission_status: "new" | "read" | "contacted"
@@ -787,6 +866,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user"],
+      blog_post_status: ["draft", "published", "failed"],
       request_status: ["pending", "in_progress", "completed"],
       site_status: ["live", "building", "maintenance"],
       submission_status: ["new", "read", "contacted"],
