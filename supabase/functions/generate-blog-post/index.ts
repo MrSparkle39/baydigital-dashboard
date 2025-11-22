@@ -19,6 +19,15 @@ function slugify(text: string): string {
     .trim()
 }
 
+// SHA-1 hash function for Netlify file uploads
+async function sha1(data: string): Promise<string> {
+  const encoder = new TextEncoder()
+  const dataBuffer = encoder.encode(data)
+  const hashBuffer = await crypto.subtle.digest('SHA-1', dataBuffer)
+  const hashArray = Array.from(new Uint8Array(hashBuffer))
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+}
+
 // Generate blog post HTML template
 function generateBlogPostHtml(data: {
   title: string
@@ -552,12 +561,23 @@ Do not include any text outside the JSON object.`
     // Generate blog index HTML
     const blogIndexHtml = generateBlogIndexHtml(indexPosts)
 
-    // Push files to Netlify
+    // Push files to Netlify using proper API
     console.log('Publishing to Netlify...')
     
-    // Create file digest for blog post
-    const blogPostPath = `/blog/${slug}.html`
-    const netlifyResponse = await fetch(
+    // Prepare files with SHA-1 hashes
+    const blogPostPath = `blog/${slug}.html`
+    const blogIndexPath = `blog.html`
+    
+    const blogPostSha = await sha1(blogPostHtml)
+    const blogIndexSha = await sha1(blogIndexHtml)
+    
+    const files: Record<string, string> = {
+      [blogPostPath]: blogPostSha,
+      [blogIndexPath]: blogIndexSha,
+    }
+
+    // Step 1: Create deploy with file digests
+    const deployResponse = await fetch(
       `https://api.netlify.com/api/v1/sites/${site.netlify_site_id}/deploys`,
       {
         method: 'POST',
@@ -566,21 +586,55 @@ Do not include any text outside the JSON object.`
           'Authorization': `Bearer ${NETLIFY_ACCESS_TOKEN}`,
         },
         body: JSON.stringify({
-          files: {
-            [blogPostPath]: blogPostHtml,
-            '/blog.html': blogIndexHtml,
-          }
+          files,
+          draft: false,
         })
       }
     )
 
-    if (!netlifyResponse.ok) {
-      const errorText = await netlifyResponse.text()
+    if (!deployResponse.ok) {
+      const errorText = await deployResponse.text()
+      console.error('Netlify deploy creation failed:', errorText)
       throw new Error(`Netlify deployment failed: ${errorText}`)
     }
 
-    const deployData = await netlifyResponse.json()
-    const publishedUrl = `https://${site.site_url}${blogPostPath}`
+    const deployData = await deployResponse.json()
+    console.log('Deploy created:', deployData.id)
+
+    // Step 2: Upload files that Netlify needs
+    const requiredFiles = deployData.required || []
+    
+    for (const filePath of requiredFiles) {
+      let fileContent = ''
+      if (filePath === blogPostPath) {
+        fileContent = blogPostHtml
+      } else if (filePath === blogIndexPath) {
+        fileContent = blogIndexHtml
+      }
+      
+      if (fileContent) {
+        const uploadResponse = await fetch(
+          `https://api.netlify.com/api/v1/deploys/${deployData.id}/files/${filePath}`,
+          {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/octet-stream',
+              'Authorization': `Bearer ${NETLIFY_ACCESS_TOKEN}`,
+            },
+            body: fileContent,
+          }
+        )
+
+        if (!uploadResponse.ok) {
+          const uploadError = await uploadResponse.text()
+          console.error(`Failed to upload ${filePath}:`, uploadError)
+        } else {
+          console.log(`Uploaded ${filePath}`)
+        }
+      }
+    }
+
+    const publishedUrl = `https://${site.site_url}/${blogPostPath}`
 
     // Save to database
     const { error: insertError } = await supabaseClient
