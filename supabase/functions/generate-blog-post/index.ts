@@ -600,9 +600,14 @@ Do not include any text outside the JSON object.`
 
     const deployData = await deployResponse.json()
     console.log('Deploy created:', deployData.id)
+    console.log('Required files:', deployData.required)
 
     // Step 2: Upload files that Netlify needs
     const requiredFiles = deployData.required || []
+    
+    if (requiredFiles.length === 0) {
+      console.log('No files required by Netlify - files may already exist or deploy is ready')
+    }
     
     for (const filePath of requiredFiles) {
       let fileContent = ''
@@ -613,6 +618,7 @@ Do not include any text outside the JSON object.`
       }
       
       if (fileContent) {
+        console.log(`Uploading ${filePath}...`)
         const uploadResponse = await fetch(
           `https://api.netlify.com/api/v1/deploys/${deployData.id}/files/${filePath}`,
           {
@@ -628,10 +634,33 @@ Do not include any text outside the JSON object.`
         if (!uploadResponse.ok) {
           const uploadError = await uploadResponse.text()
           console.error(`Failed to upload ${filePath}:`, uploadError)
+          throw new Error(`Failed to upload ${filePath}: ${uploadError}`)
         } else {
-          console.log(`Uploaded ${filePath}`)
+          console.log(`Successfully uploaded ${filePath}`)
         }
+      } else {
+        console.log(`No content for ${filePath} - skipping`)
       }
+    }
+
+    // Step 3: Mark deploy as ready (trigger publish)
+    console.log('Marking deploy as ready...')
+    const publishResponse = await fetch(
+      `https://api.netlify.com/api/v1/sites/${site.netlify_site_id}/deploys/${deployData.id}/restore`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${NETLIFY_ACCESS_TOKEN}`,
+        },
+      }
+    )
+
+    if (!publishResponse.ok) {
+      const publishError = await publishResponse.text()
+      console.error('Failed to publish deploy:', publishError)
+      // Don't throw - the deploy might auto-publish
+    } else {
+      console.log('Deploy published successfully')
     }
 
     const publishedUrl = `https://${site.site_url}/${blogPostPath}`
