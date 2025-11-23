@@ -93,13 +93,17 @@ export default function BlogMaker() {
 
       const data = await response.json();
       
-      // Freepik API returns data in data.data array
-      const images = (data.data || []).map((item: any) => ({
-        id: String(item.id),
-        url: item.image?.source?.url || item.preview?.url,
-        thumbnail: item.thumbnail?.url || item.preview?.url,
-        title: item.title || 'Untitled'
-      }));
+      // Normalize Freepik data into a common image shape
+      const images = (data.data || []).map((item: any) => {
+        const mainUrl = item.image?.source?.url || item.image?.url || item.url;
+        return {
+          id: String(item.id),
+          url: mainUrl,
+          // Use the same main URL for thumbnail to ensure it actually loads
+          thumbnail: mainUrl,
+          title: item.title || item.description || 'Untitled',
+        } as FreepikImage;
+      });
       
       setSearchResults(images);
       
