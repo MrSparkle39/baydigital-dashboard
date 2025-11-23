@@ -1,270 +1,638 @@
 import { useState } from "react";
-import { useAuth } from "@/contexts/AuthContext";
-import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
-import { Loader2, Sparkles, ExternalLink, FileText } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { Loader2, Sparkles, Image as ImageIcon, Eye, Send } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-const BlogMaker = () => {
-  const { user } = useAuth();
-  const { toast } = useToast();
+interface FreepikImage {
+  id: string;
+  url: string;
+  thumbnail: string;
+  title: string;
+}
+
+interface BlogPost {
+  title: string;
+  metaTitle: string;
+  metaDescription: string;
+  bodyHtml: string;
+  slug: string;
+  images: {
+    main: string;
+    secondary: string[];
+  };
+}
+
+export default function BlogMaker() {
+  // Step management
+  const [currentStep, setCurrentStep] = useState<'input' | 'images' | 'preview'>('input');
+  
+  // Input mode
+  const [inputMode, setInputMode] = useState<'quick' | 'detailed'>('quick');
+  
+  // Form data
   const [topic, setTopic] = useState("");
+  const [targetAudience, setTargetAudience] = useState("");
+  const [keyPoints, setKeyPoints] = useState("");
+  const [angle, setAngle] = useState("");
+  const [keywords, setKeywords] = useState("");
+  const [cta, setCta] = useState("");
   const [tone, setTone] = useState("professional");
   const [language, setLanguage] = useState("English");
+  
+  // Image selection
+  const [imageSearch, setImageSearch] = useState("");
+  const [searchResults, setSearchResults] = useState<FreepikImage[]>([]);
+  const [selectedImages, setSelectedImages] = useState<FreepikImage[]>([]);
+  const [mainImageId, setMainImageId] = useState<string>("");
+  const [loadingImages, setLoadingImages] = useState(false);
+  
+  // Preview & editing
+  const [blogPost, setBlogPost] = useState<BlogPost | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [generationStatus, setGenerationStatus] = useState("");
-  const [publishedUrl, setPublishedUrl] = useState("");
+  const [isPublishing, setIsPublishing] = useState(false);
+  
+  // Search Freepik images
+  const searchImages = async () => {
+    if (!imageSearch.trim()) {
+      toast.error("Please enter a search term");
+      return;
+    }
 
-  // Fetch user's blog posts
-  const { data: blogPosts, isLoading: postsLoading, refetch } = useQuery({
-    queryKey: ['blogmaker-posts', user?.id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('blogmaker_posts')
-        .select('*')
-        .eq('user_id', user?.id)
-        .order('created_at', { ascending: false });
+    setLoadingImages(true);
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      if (!session.session) throw new Error("Not authenticated");
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/freepik-api`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.session.access_token}`,
+          },
+          body: JSON.stringify({ query: imageSearch }),
+        }
+      );
+
+      if (!response.ok) throw new Error("Failed to search images");
+
+      const data = await response.json();
+      setSearchResults(data.images || []);
       
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!user,
-  });
+      if (!data.images || data.images.length === 0) {
+        toast.info("No images found. Try a different search term.");
+      }
+    } catch (error) {
+      console.error("Error searching images:", error);
+      toast.error("Failed to search images");
+    } finally {
+      setLoadingImages(false);
+    }
+  };
 
-  const handleGenerate = async () => {
+  // Select/deselect image
+  const toggleImageSelection = (image: FreepikImage) => {
+    if (selectedImages.find(img => img.id === image.id)) {
+      // Deselect
+      setSelectedImages(selectedImages.filter(img => img.id !== image.id));
+      if (mainImageId === image.id) {
+        setMainImageId("");
+      }
+    } else {
+      // Select (max 3)
+      if (selectedImages.length >= 3) {
+        toast.error("You can only select up to 3 images");
+        return;
+      }
+      setSelectedImages([...selectedImages, image]);
+      // Auto-set as main if it's the first one
+      if (selectedImages.length === 0) {
+        setMainImageId(image.id);
+      }
+    }
+  };
+
+  // Generate blog post
+  const generateBlogPost = async () => {
     if (!topic.trim()) {
-      toast({
-        title: "Topic Required",
-        description: "Please enter a blog post topic or keyword",
-        variant: "destructive",
-      });
+      toast.error("Please enter a blog topic");
+      return;
+    }
+
+    if (selectedImages.length === 0) {
+      toast.error("Please select at least one image");
+      return;
+    }
+
+    if (!mainImageId) {
+      toast.error("Please select a main image");
       return;
     }
 
     setIsGenerating(true);
-    setGenerationStatus("Generating blog post with AI...");
-    setPublishedUrl("");
-
     try {
-      // Call the generation API
-      const { data, error } = await supabase.functions.invoke('generate-blog-post', {
-        body: {
-          topic,
-          tone,
-          language,
-        },
-      });
+      const { data: session } = await supabase.auth.getSession();
+      if (!session.session) throw new Error("Not authenticated");
 
-      if (error) throw error;
-
-      if (data.success) {
-        setPublishedUrl(data.published_url);
-        setGenerationStatus("");
-        toast({
-          title: "Blog Post Published! 🎉",
-          description: `Your blog post is now live at ${data.published_url}`,
-        });
+      // Build enhanced prompt
+      let enhancedPrompt = topic;
+      if (inputMode === 'detailed') {
+        const details = [];
+        if (targetAudience) details.push(`Target audience: ${targetAudience}`);
+        if (keyPoints) details.push(`Key points: ${keyPoints}`);
+        if (angle) details.push(`Angle: ${angle}`);
+        if (keywords) details.push(`Keywords: ${keywords}`);
+        if (cta) details.push(`Call-to-action: ${cta}`);
         
-        // Reset form
-        setTopic("");
-        setTone("professional");
-        setLanguage("English");
-        
-        // Refetch blog posts
-        refetch();
-      } else {
-        throw new Error(data.error || "Failed to generate blog post");
+        if (details.length > 0) {
+          enhancedPrompt += "\n\nAdditional context:\n" + details.join("\n");
+        }
       }
-    } catch (error: any) {
-      console.error('Error generating blog post:', error);
-      toast({
-        title: "Generation Failed",
-        description: error.message || "Failed to generate blog post. Please try again.",
-        variant: "destructive",
-      });
-      setGenerationStatus("");
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-blog-post`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.session.access_token}`,
+          },
+          body: JSON.stringify({
+            topic: enhancedPrompt,
+            tone,
+            language,
+            images: {
+              main: selectedImages.find(img => img.id === mainImageId)?.url,
+              secondary: selectedImages
+                .filter(img => img.id !== mainImageId)
+                .map(img => img.url),
+            },
+            preview: true, // Don't publish yet
+          }),
+        }
+      );
+
+      if (!response.ok) throw new Error("Failed to generate blog post");
+
+      const data = await response.json();
+      setBlogPost(data);
+      setCurrentStep('preview');
+      toast.success("Blog post generated! Review and edit before publishing.");
+    } catch (error) {
+      console.error("Error generating blog post:", error);
+      toast.error("Failed to generate blog post");
     } finally {
       setIsGenerating(false);
     }
   };
 
+  // Publish blog post
+  const publishBlogPost = async () => {
+    if (!blogPost) return;
+
+    setIsPublishing(true);
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      if (!session.session) throw new Error("Not authenticated");
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/publish-blog-post`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.session.access_token}`,
+          },
+          body: JSON.stringify({
+            blogPost,
+            topic,
+            tone,
+            language,
+          }),
+        }
+      );
+
+      if (!response.ok) throw new Error("Failed to publish blog post");
+
+      const data = await response.json();
+      toast.success(
+        <div>
+          <p className="font-semibold">Blog post published!</p>
+          <p className="text-sm text-gray-600">{data.message}</p>
+        </div>
+      );
+
+      // Reset form
+      setCurrentStep('input');
+      setTopic("");
+      setTargetAudience("");
+      setKeyPoints("");
+      setAngle("");
+      setKeywords("");
+      setCta("");
+      setSelectedImages([]);
+      setMainImageId("");
+      setSearchResults([]);
+      setBlogPost(null);
+    } catch (error) {
+      console.error("Error publishing blog post:", error);
+      toast.error("Failed to publish blog post");
+    } finally {
+      setIsPublishing(false);
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-background">
-      <DashboardHeader />
-      
-      <main className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold mb-2 flex items-center gap-2">
-            <Sparkles className="h-8 w-8 text-purple-600" />
-            Blog Maker
-          </h2>
-          <p className="text-muted-foreground">
-            Generate SEO-optimized blog posts with AI and publish directly to your website.
-          </p>
-        </div>
+    <div className="container mx-auto py-8 max-w-6xl">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Sparkles className="h-6 w-6 text-primary" />
+            BlogMaker 2.0
+          </CardTitle>
+          <CardDescription>
+            Create professional blog posts with AI - enhanced with images and full preview
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {/* Step Indicator */}
+          <div className="flex items-center justify-center mb-8 gap-4">
+            <div className={`flex items-center gap-2 ${currentStep === 'input' ? 'text-primary font-semibold' : 'text-gray-400'}`}>
+              <div className="w-8 h-8 rounded-full border-2 flex items-center justify-center">1</div>
+              <span>Content</span>
+            </div>
+            <div className="w-16 h-0.5 bg-gray-300"></div>
+            <div className={`flex items-center gap-2 ${currentStep === 'images' ? 'text-primary font-semibold' : 'text-gray-400'}`}>
+              <div className="w-8 h-8 rounded-full border-2 flex items-center justify-center">2</div>
+              <span>Images</span>
+            </div>
+            <div className="w-16 h-0.5 bg-gray-300"></div>
+            <div className={`flex items-center gap-2 ${currentStep === 'preview' ? 'text-primary font-semibold' : 'text-gray-400'}`}>
+              <div className="w-8 h-8 rounded-full border-2 flex items-center justify-center">3</div>
+              <span>Preview & Publish</span>
+            </div>
+          </div>
 
-        <div className="grid gap-6 lg:grid-cols-2">
-          {/* Generation Form */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Generate New Blog Post</CardTitle>
-              <CardDescription>
-                Enter a topic and we'll create a professional blog post for your website
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="topic">Topic or Keyword</Label>
-                <Input
-                  id="topic"
-                  placeholder="e.g., Best NDIS Providers Sydney"
-                  value={topic}
-                  onChange={(e) => setTopic(e.target.value)}
-                  disabled={isGenerating}
-                />
-              </div>
+          {/* Step 1: Content Input */}
+          {currentStep === 'input' && (
+            <div className="space-y-6">
+              <Tabs value={inputMode} onValueChange={(v) => setInputMode(v as 'quick' | 'detailed')}>
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="quick">Quick Mode</TabsTrigger>
+                  <TabsTrigger value="detailed">Detailed Mode</TabsTrigger>
+                </TabsList>
 
-              <div className="space-y-2">
-                <Label htmlFor="tone">Writing Tone</Label>
-                <Select value={tone} onValueChange={setTone} disabled={isGenerating}>
-                  <SelectTrigger id="tone">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="professional">Professional</SelectItem>
-                    <SelectItem value="casual">Casual</SelectItem>
-                    <SelectItem value="friendly">Friendly</SelectItem>
-                    <SelectItem value="authoritative">Authoritative</SelectItem>
-                    <SelectItem value="conversational">Conversational</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+                <TabsContent value="quick" className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="topic">Blog Topic</Label>
+                    <Input
+                      id="topic"
+                      placeholder="e.g., How to Prepare for Your First NDIS Planning Meeting"
+                      value={topic}
+                      onChange={(e) => setTopic(e.target.value)}
+                    />
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="language">Language</Label>
-                <Select value={language} onValueChange={setLanguage} disabled={isGenerating}>
-                  <SelectTrigger id="language">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="English">English</SelectItem>
-                    <SelectItem value="Spanish">Spanish</SelectItem>
-                    <SelectItem value="French">French</SelectItem>
-                    <SelectItem value="German">German</SelectItem>
-                    <SelectItem value="Italian">Italian</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <Button
-                onClick={handleGenerate}
-                disabled={isGenerating || !topic.trim()}
-                className="w-full"
-                size="lg"
-              >
-                {isGenerating ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="mr-2 h-4 w-4" />
-                    Generate & Publish to Website
-                  </>
-                )}
-              </Button>
-
-              {generationStatus && (
-                <div className="text-sm text-muted-foreground text-center animate-pulse">
-                  {generationStatus}
-                </div>
-              )}
-
-              {publishedUrl && (
-                <div className="mt-4 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-                  <p className="text-sm font-medium text-green-900 dark:text-green-100 mb-2">
-                    ✅ Blog post published successfully!
-                  </p>
-                  <a
-                    href={publishedUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm text-green-700 dark:text-green-300 hover:underline flex items-center gap-1"
-                  >
-                    {publishedUrl}
-                    <ExternalLink className="h-3 w-3" />
-                  </a>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Blog Post History */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Blog Posts</CardTitle>
-              <CardDescription>
-                View your published blog posts
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {postsLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </div>
-              ) : blogPosts && blogPosts.length > 0 ? (
-                <div className="space-y-3">
-                  {blogPosts.slice(0, 10).map((post) => (
-                    <div
-                      key={post.id}
-                      className="flex items-start gap-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
-                    >
-                      <FileText className="h-5 w-5 text-muted-foreground mt-0.5" />
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-medium text-sm truncate">{post.title}</h4>
-                        <p className="text-xs text-muted-foreground">
-                          {new Date(post.created_at).toLocaleDateString()}
-                        </p>
-                      </div>
-                      {post.published_url && (
-                        <a
-                          href={post.published_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-purple-600 hover:text-purple-700"
-                        >
-                          <ExternalLink className="h-4 w-4" />
-                        </a>
-                      )}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="tone">Tone</Label>
+                      <select
+                        id="tone"
+                        value={tone}
+                        onChange={(e) => setTone(e.target.value)}
+                        className="w-full p-2 border rounded-md"
+                      >
+                        <option value="professional">Professional</option>
+                        <option value="friendly">Friendly</option>
+                        <option value="casual">Casual</option>
+                        <option value="formal">Formal</option>
+                      </select>
                     </div>
-                  ))}
+
+                    <div className="space-y-2">
+                      <Label htmlFor="language">Language</Label>
+                      <select
+                        id="language"
+                        value={language}
+                        onChange={(e) => setLanguage(e.target.value)}
+                        className="w-full p-2 border rounded-md"
+                      >
+                        <option value="English">English</option>
+                        <option value="Spanish">Spanish</option>
+                        <option value="French">French</option>
+                      </select>
+                    </div>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="detailed" className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="topic-detailed">Blog Topic *</Label>
+                    <Input
+                      id="topic-detailed"
+                      placeholder="e.g., How to Prepare for Your First NDIS Planning Meeting"
+                      value={topic}
+                      onChange={(e) => setTopic(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="audience">Target Audience</Label>
+                    <Input
+                      id="audience"
+                      placeholder="e.g., NDIS participants and their families"
+                      value={targetAudience}
+                      onChange={(e) => setTargetAudience(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="keypoints">Key Points to Cover</Label>
+                    <Textarea
+                      id="keypoints"
+                      placeholder="e.g., Required documents, Common questions, What to expect"
+                      value={keyPoints}
+                      onChange={(e) => setKeyPoints(e.target.value)}
+                      rows={3}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="angle">Specific Angle/Perspective</Label>
+                    <Input
+                      id="angle"
+                      placeholder="e.g., First-person perspective from support workers"
+                      value={angle}
+                      onChange={(e) => setAngle(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="keywords">SEO Keywords</Label>
+                    <Input
+                      id="keywords"
+                      placeholder="e.g., NDIS planning, disability support, participant rights"
+                      value={keywords}
+                      onChange={(e) => setKeywords(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="cta">Call-to-Action</Label>
+                    <Input
+                      id="cta"
+                      placeholder="e.g., Contact us for personalized NDIS support"
+                      value={cta}
+                      onChange={(e) => setCta(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="tone-detailed">Tone</Label>
+                      <select
+                        id="tone-detailed"
+                        value={tone}
+                        onChange={(e) => setTone(e.target.value)}
+                        className="w-full p-2 border rounded-md"
+                      >
+                        <option value="professional">Professional</option>
+                        <option value="friendly">Friendly</option>
+                        <option value="casual">Casual</option>
+                        <option value="formal">Formal</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="language-detailed">Language</Label>
+                      <select
+                        id="language-detailed"
+                        value={language}
+                        onChange={(e) => setLanguage(e.target.value)}
+                        className="w-full p-2 border rounded-md"
+                      >
+                        <option value="English">English</option>
+                        <option value="Spanish">Spanish</option>
+                        <option value="French">French</option>
+                      </select>
+                    </div>
+                  </div>
+                </TabsContent>
+              </Tabs>
+
+              <div className="flex justify-end">
+                <Button onClick={() => setCurrentStep('images')} size="lg">
+                  Next: Select Images
+                  <ImageIcon className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Step 2: Image Selection */}
+          {currentStep === 'images' && (
+            <div className="space-y-6">
+              <div className="space-y-4">
+                <Label>Search for Images (Select up to 3)</Label>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="e.g., disability support, NDIS services"
+                    value={imageSearch}
+                    onChange={(e) => setImageSearch(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && searchImages()}
+                  />
+                  <Button onClick={searchImages} disabled={loadingImages}>
+                    {loadingImages ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Searching...
+                      </>
+                    ) : (
+                      "Search"
+                    )}
+                  </Button>
                 </div>
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                  <p className="text-sm">No blog posts yet</p>
-                  <p className="text-xs">Generate your first blog post to get started!</p>
+              </div>
+
+              {/* Selected Images */}
+              {selectedImages.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Selected Images ({selectedImages.length}/3)</Label>
+                  <RadioGroup value={mainImageId} onValueChange={setMainImageId}>
+                    <div className="grid grid-cols-3 gap-4">
+                      {selectedImages.map((image) => (
+                        <div
+                          key={image.id}
+                          className="relative border-2 border-primary rounded-lg p-2"
+                        >
+                          <img
+                            src={image.thumbnail}
+                            alt={image.title}
+                            className="w-full h-40 object-cover rounded"
+                          />
+                          <div className="mt-2 flex items-center gap-2">
+                            <RadioGroupItem value={image.id} id={image.id} />
+                            <Label htmlFor={image.id} className="text-sm cursor-pointer">
+                              {mainImageId === image.id ? "Main Image" : "Set as Main"}
+                            </Label>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            className="absolute top-1 right-1"
+                            onClick={() => toggleImageSelection(image)}
+                          >
+                            ×
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </RadioGroup>
                 </div>
               )}
-            </CardContent>
-          </Card>
-        </div>
-      </main>
+
+              {/* Search Results */}
+              {searchResults.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Search Results (Click to select)</Label>
+                  <div className="grid grid-cols-4 gap-4 max-h-[400px] overflow-y-auto">
+                    {searchResults.map((image) => {
+                      const isSelected = selectedImages.find(img => img.id === image.id);
+                      return (
+                        <div
+                          key={image.id}
+                          className={`cursor-pointer border-2 rounded-lg p-2 transition-all ${
+                            isSelected ? 'border-primary' : 'border-gray-200 hover:border-gray-400'
+                          }`}
+                          onClick={() => toggleImageSelection(image)}
+                        >
+                          <img
+                            src={image.thumbnail}
+                            alt={image.title}
+                            className="w-full h-32 object-cover rounded"
+                          />
+                          {isSelected && (
+                            <div className="mt-1 text-xs text-primary font-semibold text-center">
+                              ✓ Selected
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-between">
+                <Button variant="outline" onClick={() => setCurrentStep('input')}>
+                  Back
+                </Button>
+                <Button
+                  onClick={generateBlogPost}
+                  disabled={isGenerating || selectedImages.length === 0 || !mainImageId}
+                  size="lg"
+                >
+                  {isGenerating ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      Generate Preview
+                      <Eye className="ml-2 h-4 w-4" />
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Step 3: Preview & Publish */}
+          {currentStep === 'preview' && blogPost && (
+            <div className="space-y-6">
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <p className="text-sm text-yellow-800">
+                  <strong>Preview Mode:</strong> Review and edit your blog post below. Click "Publish" when you're happy with it!
+                </p>
+              </div>
+
+              {/* Editable Preview */}
+              <div className="border rounded-lg p-6 bg-white space-y-4">
+                <div className="space-y-2">
+                  <Label>Title</Label>
+                  <Input
+                    value={blogPost.title}
+                    onChange={(e) => setBlogPost({ ...blogPost, title: e.target.value })}
+                    className="text-2xl font-bold"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Meta Description (for SEO)</Label>
+                  <Textarea
+                    value={blogPost.metaDescription}
+                    onChange={(e) => setBlogPost({ ...blogPost, metaDescription: e.target.value })}
+                    rows={2}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Main Image</Label>
+                  <img
+                    src={blogPost.images.main}
+                    alt="Main blog image"
+                    className="w-full max-h-[400px] object-cover rounded-lg"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Content (Click text to edit)</Label>
+                  <div
+                    contentEditable
+                    suppressContentEditableWarning
+                    className="prose max-w-none p-4 border rounded-lg min-h-[400px] focus:outline-none focus:ring-2 focus:ring-primary"
+                    dangerouslySetInnerHTML={{ __html: blogPost.bodyHtml }}
+                    onBlur={(e) => setBlogPost({ ...blogPost, bodyHtml: e.currentTarget.innerHTML })}
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-between">
+                <Button variant="outline" onClick={() => setCurrentStep('images')}>
+                  Back to Images
+                </Button>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={generateBlogPost} disabled={isGenerating}>
+                    Regenerate
+                  </Button>
+                  <Button onClick={publishBlogPost} disabled={isPublishing} size="lg">
+                    {isPublishing ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Publishing...
+                      </>
+                    ) : (
+                      <>
+                        Publish to Site
+                        <Send className="ml-2 h-4 w-4" />
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
-};
-
-export default BlogMaker;
+}
