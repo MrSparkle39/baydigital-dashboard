@@ -1,41 +1,32 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY')!
-const NETLIFY_ACCESS_TOKEN = Deno.env.get('NETLIFY_ACCESS_TOKEN')!
+const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY")!;
+const GITHUB_ACCESS_TOKEN = Deno.env.get("GITHUB_ACCESS_TOKEN")!;
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
 
 // Slugify function
 function slugify(text: string): string {
   return text
     .toLowerCase()
-    .replace(/[^\w\s-]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-    .trim()
-}
-
-// SHA-1 hash function for Netlify file uploads
-async function sha1(data: string): Promise<string> {
-  const encoder = new TextEncoder()
-  const dataBuffer = encoder.encode(data)
-  const hashBuffer = await crypto.subtle.digest('SHA-1', dataBuffer)
-  const hashArray = Array.from(new Uint8Array(hashBuffer))
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+    .replace(/[^\w\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .trim();
 }
 
 // Generate blog post HTML template
 function generateBlogPostHtml(data: {
-  title: string
-  metaTitle: string
-  metaDescription: string
-  content: string
-  slug: string
-  publishedDate: string
+  title: string;
+  metaTitle: string;
+  metaDescription: string;
+  content: string;
+  slug: string;
+  publishedDate: string;
 }): string {
   return `<!DOCTYPE html>
 <html lang="en">
@@ -174,12 +165,12 @@ function generateBlogPostHtml(data: {
 <body>
   <header>
     <div class="header-content">
-      <a href="/" class="logo">Your Business</a>
+      <a href="/" class="logo">TIC</a>
       <nav>
         <a href="/">Home</a>
-        <a href="/services">Services</a>
-        <a href="/blog">Blog</a>
-        <a href="/contact">Contact</a>
+        <a href="/services.html">Services</a>
+        <a href="/blog.html">Blog</a>
+        <a href="/contact.html">Contact</a>
       </nav>
     </div>
   </header>
@@ -193,42 +184,48 @@ function generateBlogPostHtml(data: {
       <div class="content">
         ${data.content}
       </div>
-      <a href="/blog" class="back-link">← Back to Blog</a>
+      <a href="/blog.html" class="back-link">← Back to Blog</a>
     </article>
   </div>
 
   <footer>
-    <p>&copy; ${new Date().getFullYear()} Your Business. All rights reserved.</p>
+    <p>&copy; ${new Date().getFullYear()} The Inclusion Crew. All rights reserved.</p>
   </footer>
 </body>
-</html>`
+</html>`;
 }
 
 // Generate blog index HTML
-function generateBlogIndexHtml(posts: Array<{
-  title: string
-  slug: string
-  excerpt: string
-  publishedDate: string
-}>): string {
-  const postCards = posts.map(post => `
+function generateBlogIndexHtml(
+  posts: Array<{
+    title: string;
+    slug: string;
+    excerpt: string;
+    publishedDate: string;
+  }>,
+): string {
+  const postCards = posts
+    .map(
+      (post) => `
     <div class="blog-card">
       <div class="blog-card-image"></div>
       <div class="blog-card-content">
-        <h3><a href="/blog/${post.slug}">${post.title}</a></h3>
+        <h3><a href="/blog/${post.slug}.html">${post.title}</a></h3>
         <p class="date">${post.publishedDate}</p>
         <p class="excerpt">${post.excerpt}</p>
-        <a href="/blog/${post.slug}" class="read-more">Read More →</a>
+        <a href="/blog/${post.slug}.html" class="read-more">Read More →</a>
       </div>
     </div>
-  `).join('')
+  `,
+    )
+    .join("");
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Blog - Your Business</title>
+  <title>Blog - The Inclusion Crew</title>
   <meta name="description" content="Read our latest blog posts and updates">
   <style>
     * {
@@ -323,10 +320,10 @@ function generateBlogIndexHtml(posts: Array<{
     .date {
       color: #999;
       font-size: 0.85rem;
-      margin-bottom: 0.8rem;
+      margin-bottom: 0.5rem;
     }
     .excerpt {
-      color: #666;
+      color: #555;
       margin-bottom: 1rem;
       line-height: 1.6;
     }
@@ -365,12 +362,12 @@ function generateBlogIndexHtml(posts: Array<{
 <body>
   <header>
     <div class="header-content">
-      <a href="/" class="logo">Your Business</a>
+      <a href="/" class="logo">TIC</a>
       <nav>
         <a href="/">Home</a>
-        <a href="/services">Services</a>
-        <a href="/blog">Blog</a>
-        <a href="/contact">Contact</a>
+        <a href="/services.html">Services</a>
+        <a href="/blog.html">Blog</a>
+        <a href="/contact.html">Contact</a>
       </nav>
     </div>
   </header>
@@ -385,70 +382,68 @@ function generateBlogIndexHtml(posts: Array<{
   </div>
 
   <footer>
-    <p>&copy; ${new Date().getFullYear()} Your Business. All rights reserved.</p>
+    <p>&copy; ${new Date().getFullYear()} The Inclusion Crew. All rights reserved.</p>
   </footer>
 </body>
-</html>`
+</html>`;
 }
 
 serve(async (req) => {
   // Handle CORS
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
   }
 
   try {
     // Get auth token
-    const authHeader = req.headers.get('Authorization')!
-    const token = authHeader.replace('Bearer ', '')
-    
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: authHeader } } }
-    )
+    const authHeader = req.headers.get("Authorization")!;
+    const token = authHeader.replace("Bearer ", "");
+
+    const supabaseClient = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_ANON_KEY") ?? "", {
+      global: { headers: { Authorization: authHeader } },
+    });
 
     // Get user
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token)
+    const {
+      data: { user },
+      error: userError,
+    } = await supabaseClient.auth.getUser(token);
     if (userError || !user) {
-      throw new Error('Unauthorized')
+      throw new Error("Unauthorized");
     }
 
     // Get request body
-    const { topic, tone, language } = await req.json()
+    const { topic, tone, language } = await req.json();
 
     // Get user's site info
     const { data: sites, error: sitesError } = await supabaseClient
-      .from('sites')
-      .select('*')
-      .eq('user_id', user.id)
-      .limit(1)
+      .from("sites")
+      .select("*")
+      .eq("user_id", user.id)
+      .limit(1);
 
     if (sitesError || !sites || sites.length === 0) {
-      throw new Error('No site found for user')
+      throw new Error("No site found for user");
     }
 
-    const site = sites[0]
-
-    if (!site.netlify_site_id) {
-      throw new Error('Netlify site ID not configured')
-    }
+    const site = sites[0];
 
     // Generate blog post with Claude
-    console.log('Generating blog post with Claude...')
-    const claudeResponse = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
+    console.log("Generating blog post with Claude...");
+    const claudeResponse = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
+        "Content-Type": "application/json",
+        "x-api-key": ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: "claude-sonnet-4-20250514",
         max_tokens: 4096,
-        messages: [{
-          role: 'user',
-          content: `You are a professional ${tone} content writer. Write a comprehensive, SEO-optimized blog post in ${language} about: "${topic}".
+        messages: [
+          {
+            role: "user",
+            content: `You are a professional ${tone} content writer. Write a comprehensive, SEO-optimized blog post in ${language} about: "${topic}".
 
 Requirements:
 - 800-1200 words
@@ -470,52 +465,53 @@ Return ONLY a JSON object with this exact structure:
   "body_html": "<h2>First Section</h2><p>Content here...</p>"
 }
 
-Do not include any text outside the JSON object.`
-        }]
-      })
-    })
+Do not include any text outside the JSON object.`,
+          },
+        ],
+      }),
+    });
 
     if (!claudeResponse.ok) {
-      throw new Error('Failed to generate blog post with Claude')
+      throw new Error("Failed to generate blog post with Claude");
     }
 
-    const claudeData = await claudeResponse.json()
-    let content = claudeData?.content?.[0]?.text as string
+    const claudeData = await claudeResponse.json();
+    let content = claudeData?.content?.[0]?.text as string;
 
-    if (!content || typeof content !== 'string') {
-      throw new Error('Claude response missing text content')
+    if (!content || typeof content !== "string") {
+      throw new Error("Claude response missing text content");
     }
 
     // Claude sometimes wraps JSON in ```json fences; strip them before parsing
-    let jsonText = content.trim()
-    if (jsonText.startsWith('```')) {
-      const firstBrace = jsonText.indexOf('{')
-      const lastBrace = jsonText.lastIndexOf('}')
+    let jsonText = content.trim();
+    if (jsonText.startsWith("```")) {
+      const firstBrace = jsonText.indexOf("{");
+      const lastBrace = jsonText.lastIndexOf("}");
       if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-        jsonText = jsonText.slice(firstBrace, lastBrace + 1)
+        jsonText = jsonText.slice(firstBrace, lastBrace + 1);
       }
     }
 
-    let blogData
+    let blogData;
     try {
-      blogData = JSON.parse(jsonText)
+      blogData = JSON.parse(jsonText);
     } catch (parseError) {
-      console.error('Failed to parse Claude JSON:', {
+      console.error("Failed to parse Claude JSON:", {
         error: parseError instanceof Error ? parseError.message : String(parseError),
         snippet: jsonText.slice(0, 200),
-      })
-      throw new Error('Failed to parse AI response. Please try again.')
+      });
+      throw new Error("Failed to parse AI response. Please try again.");
     }
-    
+
     // Generate slug
-    const slug = slugify(blogData.title)
-    
+    const slug = slugify(blogData.title);
+
     // Get current date
-    const publishedDate = new Date().toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    })
+    const publishedDate = new Date().toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
 
     // Generate complete blog post HTML
     const blogPostHtml = generateBlogPostHtml({
@@ -524,19 +520,19 @@ Do not include any text outside the JSON object.`
       metaDescription: blogData.meta_description,
       content: blogData.body_html,
       slug,
-      publishedDate
-    })
+      publishedDate,
+    });
 
     // Get existing blog posts for the index
     const { data: existingPosts } = await supabaseClient
-      .from('blogmaker_posts')
-      .select('title, slug, meta_description, published_at')
-      .eq('site_id', site.id)
-      .eq('status', 'published')
-      .order('published_at', { ascending: false })
+      .from("blogmaker_posts")
+      .select("title, slug, meta_description, published_at")
+      .eq("site_id", site.id)
+      .eq("status", "published")
+      .order("published_at", { ascending: false });
 
     // Create excerpt from meta description
-    const excerpt = blogData.meta_description.slice(0, 150) + '...'
+    const excerpt = blogData.meta_description.slice(0, 150) + "...";
 
     // Prepare blog index posts array
     const indexPosts = [
@@ -544,149 +540,202 @@ Do not include any text outside the JSON object.`
         title: blogData.title,
         slug,
         excerpt,
-        publishedDate
+        publishedDate,
       },
       ...(existingPosts || []).map((post: any) => ({
         title: post.title,
         slug: post.slug,
-        excerpt: post.meta_description?.slice(0, 150) + '...' || '',
-        publishedDate: new Date(post.published_at).toLocaleDateString('en-US', {
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric'
-        })
-      }))
-    ]
+        excerpt: post.meta_description?.slice(0, 150) + "..." || "",
+        publishedDate: new Date(post.published_at).toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        }),
+      })),
+    ];
 
     // Generate blog index HTML
-    const blogIndexHtml = generateBlogIndexHtml(indexPosts)
+    const blogIndexHtml = generateBlogIndexHtml(indexPosts);
 
-    // Push files to Netlify using proper API
-    console.log('Publishing to Netlify...')
-    
-    // Prepare files with SHA-1 hashes
-    const blogPostPath = `blog/${slug}.html`
-    const blogIndexPath = `blog.html`
-    
-    const blogPostSha = await sha1(blogPostHtml)
-    const blogIndexSha = await sha1(blogIndexHtml)
-    
-    const files: Record<string, string> = {
-      [blogPostPath]: blogPostSha,
-      [blogIndexPath]: blogIndexSha,
+    // Push files to GitHub
+    console.log("Committing to GitHub...");
+
+    const blogPostPath = `blog/${slug}.html`;
+    const blogIndexPath = `blog.html`;
+    const githubRepo = "MrSparkle39/tic";
+    const branch = "main";
+
+    // Get current commit SHA for the branch
+    const refResponse = await fetch(`https://api.github.com/repos/${githubRepo}/git/refs/heads/${branch}`, {
+      headers: {
+        Authorization: `Bearer ${GITHUB_ACCESS_TOKEN}`,
+        Accept: "application/vnd.github.v3+json",
+      },
+    });
+
+    if (!refResponse.ok) {
+      const errorText = await refResponse.text();
+      throw new Error(`Failed to get branch ref: ${errorText}`);
     }
 
-    // Step 1: Create deploy with file digests
-    const deployResponse = await fetch(
-      `https://api.netlify.com/api/v1/sites/${site.netlify_site_id}/deploys`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${NETLIFY_ACCESS_TOKEN}`,
-        },
-        body: JSON.stringify({
-          files,
-          draft: false,
-        })
-      }
-    )
+    const refData = await refResponse.json();
+    const currentCommitSha = refData.object.sha;
 
-    if (!deployResponse.ok) {
-      const errorText = await deployResponse.text()
-      console.error('Netlify deploy creation failed:', errorText)
-      throw new Error(`Netlify deployment failed: ${errorText}`)
+    console.log("Current commit SHA:", currentCommitSha);
+
+    // Get the commit to get the tree
+    const commitResponse = await fetch(`https://api.github.com/repos/${githubRepo}/git/commits/${currentCommitSha}`, {
+      headers: {
+        Authorization: `Bearer ${GITHUB_ACCESS_TOKEN}`,
+        Accept: "application/vnd.github.v3+json",
+      },
+    });
+
+    if (!commitResponse.ok) {
+      throw new Error("Failed to get commit data");
     }
 
-    const deployData = await deployResponse.json()
-    console.log('Deploy created:', deployData.id)
-    console.log('Required files:', deployData.required)
+    const commitData = await commitResponse.json();
+    const baseTreeSha = commitData.tree.sha;
 
-    // Step 2: Upload files that Netlify needs
-    const requiredFiles = deployData.required || []
-    
-    if (requiredFiles.length === 0) {
-      console.log('No files required by Netlify - files may already exist or deploy is ready')
+    // Create blobs for the new files
+    const blogPostBlobResponse = await fetch(`https://api.github.com/repos/${githubRepo}/git/blobs`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${GITHUB_ACCESS_TOKEN}`,
+        Accept: "application/vnd.github.v3+json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        content: blogPostHtml,
+        encoding: "utf-8",
+      }),
+    });
+
+    if (!blogPostBlobResponse.ok) {
+      throw new Error("Failed to create blog post blob");
     }
-    
-    for (const filePath of requiredFiles) {
-      let fileContent = ''
-      if (filePath === blogPostPath) {
-        fileContent = blogPostHtml
-      } else if (filePath === blogIndexPath) {
-        fileContent = blogIndexHtml
-      }
-      
-      if (fileContent) {
-        console.log(`Uploading ${filePath}...`)
-        const uploadResponse = await fetch(
-          `https://api.netlify.com/api/v1/deploys/${deployData.id}/files/${filePath}`,
+
+    const blogPostBlob = await blogPostBlobResponse.json();
+
+    const blogIndexBlobResponse = await fetch(`https://api.github.com/repos/${githubRepo}/git/blobs`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${GITHUB_ACCESS_TOKEN}`,
+        Accept: "application/vnd.github.v3+json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        content: blogIndexHtml,
+        encoding: "utf-8",
+      }),
+    });
+
+    if (!blogIndexBlobResponse.ok) {
+      throw new Error("Failed to create blog index blob");
+    }
+
+    const blogIndexBlob = await blogIndexBlobResponse.json();
+
+    // Create a new tree with the files
+    const treeResponse = await fetch(`https://api.github.com/repos/${githubRepo}/git/trees`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${GITHUB_ACCESS_TOKEN}`,
+        Accept: "application/vnd.github.v3+json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        base_tree: baseTreeSha,
+        tree: [
           {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/octet-stream',
-              'Authorization': `Bearer ${NETLIFY_ACCESS_TOKEN}`,
-            },
-            body: fileContent,
-          }
-        )
+            path: blogPostPath,
+            mode: "100644",
+            type: "blob",
+            sha: blogPostBlob.sha,
+          },
+          {
+            path: blogIndexPath,
+            mode: "100644",
+            type: "blob",
+            sha: blogIndexBlob.sha,
+          },
+        ],
+      }),
+    });
 
-        if (!uploadResponse.ok) {
-          const uploadError = await uploadResponse.text()
-          console.error(`Failed to upload ${filePath}:`, uploadError)
-          throw new Error(`Failed to upload ${filePath}: ${uploadError}`)
-        } else {
-          console.log(`Successfully uploaded ${filePath}`)
-        }
-      } else {
-        console.log(`No content for ${filePath} - skipping`)
-      }
+    if (!treeResponse.ok) {
+      const errorText = await treeResponse.text();
+      throw new Error(`Failed to create tree: ${errorText}`);
     }
 
-    // Step 3: Mark deploy as ready (trigger publish)
-    console.log('Marking deploy as ready...')
-    const publishResponse = await fetch(
-      `https://api.netlify.com/api/v1/sites/${site.netlify_site_id}/deploys/${deployData.id}/restore`,
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${NETLIFY_ACCESS_TOKEN}`,
-        },
-      }
-    )
+    const treeData = await treeResponse.json();
 
-    if (!publishResponse.ok) {
-      const publishError = await publishResponse.text()
-      console.error('Failed to publish deploy:', publishError)
-      // Don't throw - the deploy might auto-publish
-    } else {
-      console.log('Deploy published successfully')
+    // Create a new commit
+    const newCommitResponse = await fetch(`https://api.github.com/repos/${githubRepo}/git/commits`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${GITHUB_ACCESS_TOKEN}`,
+        Accept: "application/vnd.github.v3+json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        message: `Add blog post: ${blogData.title}`,
+        tree: treeData.sha,
+        parents: [currentCommitSha],
+      }),
+    });
+
+    if (!newCommitResponse.ok) {
+      const errorText = await newCommitResponse.text();
+      throw new Error(`Failed to create commit: ${errorText}`);
     }
 
-    const publishedUrl = `https://${site.site_url}/${blogPostPath}`
+    const newCommitData = await newCommitResponse.json();
+
+    // Update the reference
+    const updateRefResponse = await fetch(`https://api.github.com/repos/${githubRepo}/git/refs/heads/${branch}`, {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${GITHUB_ACCESS_TOKEN}`,
+        Accept: "application/vnd.github.v3+json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        sha: newCommitData.sha,
+      }),
+    });
+
+    if (!updateRefResponse.ok) {
+      const errorText = await updateRefResponse.text();
+      throw new Error(`Failed to update ref: ${errorText}`);
+    }
+
+    console.log("Successfully committed to GitHub");
+    console.log("Netlify will auto-deploy in ~30-60 seconds");
+
+    const publishedUrl = `https://${site.site_url}/${blogPostPath}`;
 
     // Save to database
-    const { error: insertError } = await supabaseClient
-      .from('blogmaker_posts')
-      .insert({
-        user_id: user.id,
-        site_id: site.id,
-        title: blogData.title,
-        slug,
-        body_html: blogData.body_html,
-        meta_title: blogData.meta_title,
-        meta_description: blogData.meta_description,
-        keywords: blogData.keywords,
-        topic,
-        tone,
-        language,
-        published_url: publishedUrl,
-        status: 'published',
-        published_at: new Date().toISOString()
-      })
+    const { error: insertError } = await supabaseClient.from("blogmaker_posts").insert({
+      user_id: user.id,
+      site_id: site.id,
+      title: blogData.title,
+      slug,
+      body_html: blogData.body_html,
+      meta_title: blogData.meta_title,
+      meta_description: blogData.meta_description,
+      keywords: blogData.keywords,
+      topic,
+      tone,
+      language,
+      published_url: publishedUrl,
+      status: "published",
+      published_at: new Date().toISOString(),
+    });
 
     if (insertError) {
-      console.error('Failed to save to database:', insertError)
+      console.error("Failed to save to database:", insertError);
       // Continue anyway - the post is published
     }
 
@@ -696,24 +745,24 @@ Do not include any text outside the JSON object.`
         published_url: publishedUrl,
         title: blogData.title,
         slug,
-        deploy_id: deployData.id
+        message: "Blog post committed to GitHub. Netlify will deploy in ~30-60 seconds.",
       }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200 
-      }
-    )
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      },
+    );
   } catch (error) {
-    console.error('Error:', error)
+    console.error("Error:", error);
     return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: error instanceof Error ? error.message : 'An unknown error occurred'
+      JSON.stringify({
+        success: false,
+        error: error instanceof Error ? error.message : "An unknown error occurred",
       }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400 
-      }
-    )
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400,
+      },
+    );
   }
-})
+});
