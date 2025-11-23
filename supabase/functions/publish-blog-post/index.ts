@@ -1265,7 +1265,7 @@ serve(async (req) => {
         published_url: publishedUrl,
         title: blogPost.title,
         slug: blogPost.slug,
-        message: 'Blog post committed to GitHub. Netlify will deploy in ~30-60 seconds.'
+        message: 'Your blog post is being published and will be live shortly!'
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
