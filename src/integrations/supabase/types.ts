@@ -62,10 +62,12 @@ export type Database = {
           id: string
           keywords: string[] | null
           language: string
+          main_image_url: string | null
           meta_description: string | null
           meta_title: string | null
           published_at: string | null
           published_url: string | null
+          secondary_image_urls: string[] | null
           site_id: string
           slug: string
           status: Database["public"]["Enums"]["blog_post_status"] | null
@@ -81,10 +83,12 @@ export type Database = {
           id?: string
           keywords?: string[] | null
           language?: string
+          main_image_url?: string | null
           meta_description?: string | null
           meta_title?: string | null
           published_at?: string | null
           published_url?: string | null
+          secondary_image_urls?: string[] | null
           site_id: string
           slug: string
           status?: Database["public"]["Enums"]["blog_post_status"] | null
@@ -100,10 +104,12 @@ export type Database = {
           id?: string
           keywords?: string[] | null
           language?: string
+          main_image_url?: string | null
           meta_description?: string | null
           meta_title?: string | null
           published_at?: string | null
           published_url?: string | null
+          secondary_image_urls?: string[] | null
           site_id?: string
           slug?: string
           status?: Database["public"]["Enums"]["blog_post_status"] | null

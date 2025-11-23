@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.generate-blog-post]
 verify_jwt = true
+
+[functions.publish-blog-post]
+verify_jwt = true
