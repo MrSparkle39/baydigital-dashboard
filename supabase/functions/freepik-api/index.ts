@@ -29,7 +29,10 @@ serve(async (req) => {
       throw new Error('Unauthorized');
     }
 
-    const { action, ...params } = await req.json();
+    const body = await req.json();
+    console.log('Received request body:', JSON.stringify(body));
+    const { action, ...params } = body;
+    console.log('Action:', action, 'Params:', params);
 
     switch (action) {
       case 'search': {
