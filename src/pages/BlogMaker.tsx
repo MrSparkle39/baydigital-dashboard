@@ -78,21 +78,37 @@ export default function BlogMaker() {
             "Content-Type": "application/json",
             Authorization: `Bearer ${session.session.access_token}`,
           },
-          body: JSON.stringify({ query: imageSearch }),
+          body: JSON.stringify({ 
+            action: 'search',
+            query: imageSearch,
+            limit: 20
+          }),
         }
       );
 
-      if (!response.ok) throw new Error("Failed to search images");
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to search images");
+      }
 
       const data = await response.json();
-      setSearchResults(data.images || []);
       
-      if (!data.images || data.images.length === 0) {
+      // Freepik API returns data in data.data array
+      const images = (data.data || []).map((item: any) => ({
+        id: String(item.id),
+        url: item.image?.source?.url || item.preview?.url,
+        thumbnail: item.thumbnail?.url || item.preview?.url,
+        title: item.title || 'Untitled'
+      }));
+      
+      setSearchResults(images);
+      
+      if (images.length === 0) {
         toast.info("No images found. Try a different search term.");
       }
     } catch (error) {
       console.error("Error searching images:", error);
-      toast.error("Failed to search images");
+      toast.error(error instanceof Error ? error.message : "Failed to search images");
     } finally {
       setLoadingImages(false);
     }
