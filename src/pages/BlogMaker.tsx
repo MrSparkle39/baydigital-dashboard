@@ -100,23 +100,42 @@ export default function BlogMaker() {
 
       const data = await response.json();
       
+      console.log('Freepik API sample response:', data.data?.[0]); // Debug log
+      
       // Normalize Freepik data into a common image shape
       const images = (data.data || []).map((item: any) => {
         // Try multiple thumbnail paths in order of preference
-        const thumbnailUrl = item.image?.thumbnails?.medium?.url || 
-                           item.image?.thumbnails?.small?.url ||
-                           item.thumbnail?.url ||
-                           item.image?.source?.url || 
-                           item.image?.url || 
-                           item.url;
+        let thumbnailUrl = null;
         
-        const mainUrl = item.image?.source?.url || item.image?.url || item.url;
+        // Check various possible thumbnail locations in Freepik response
+        if (item.thumbnails) {
+          thumbnailUrl = item.thumbnails[0]?.url || item.thumbnails.medium || item.thumbnails.small;
+        } else if (item.image?.thumbnails) {
+          thumbnailUrl = item.image.thumbnails.medium?.url || 
+                        item.image.thumbnails.small?.url ||
+                        item.image.thumbnails[0]?.url;
+        } else if (item.thumbnail) {
+          thumbnailUrl = item.thumbnail.url || item.thumbnail;
+        }
+        
+        // Fallback to preview or main URL
+        const mainUrl = item.image?.source?.url || 
+                       item.image?.url || 
+                       item.preview?.url ||
+                       item.url;
+        
+        const finalThumbnail = thumbnailUrl || mainUrl;
+        
+        console.log('Image mapping:', { 
+          id: item.id, 
+          thumbnail: finalThumbnail?.substring(0, 50),
+          hasThumb: !!thumbnailUrl 
+        });
         
         return {
           id: String(item.id),
           url: mainUrl,
-          // Use dedicated thumbnail or fallback to main URL
-          thumbnail: thumbnailUrl || mainUrl,
+          thumbnail: finalThumbnail,
           title: item.title || item.description || 'Untitled',
         } as FreepikImage;
       });
