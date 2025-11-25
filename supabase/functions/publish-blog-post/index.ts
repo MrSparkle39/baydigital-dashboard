@@ -28,6 +28,7 @@ function generateBlogPostHtml(data: {
   publishedDate: string
   mainImage: string
   secondaryImages: string[]
+  ga4PropertyId?: string | null
 }): string {
   // Insert secondary images into content sections
   let enhancedContent = data.content
@@ -60,6 +61,16 @@ function generateBlogPostHtml(data: {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${data.metaTitle}</title>
     <meta name="description" content="${data.metaDescription}">
+    ${data.ga4PropertyId ? `
+    <!-- Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=${data.ga4PropertyId}"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', '${data.ga4PropertyId}');
+    </script>
+    ` : ''}
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
@@ -602,7 +613,7 @@ function generateBlogIndexHtml(posts: Array<{
   excerpt: string
   publishedDate: string
   thumbnail: string
-}>): string {
+}>, ga4PropertyId?: string | null): string {
   const postCards = posts.map(post => `
     <div class="blog-card">
       <div class="blog-card-image" style="background-image: url('${post.thumbnail}')"></div>
@@ -622,6 +633,16 @@ function generateBlogIndexHtml(posts: Array<{
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Blog - The Inclusion Crew | NDIS Support Insights</title>
     <meta name="description" content="Read our latest NDIS support insights, disability services tips, and community inclusion updates from The Inclusion Crew.">
+    ${ga4PropertyId ? `
+    <!-- Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=${ga4PropertyId}"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', '${ga4PropertyId}');
+    </script>
+    ` : ''}
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
@@ -1024,6 +1045,15 @@ serve(async (req) => {
 
     const site = sites[0]
 
+    // Fetch user's GA4 property ID for analytics tracking
+    const { data: userData } = await supabaseClient
+      .from('users')
+      .select('ga4_property_id')
+      .eq('id', user.id)
+      .single()
+
+    const ga4PropertyId = userData?.ga4_property_id || null
+
     // Format date
     const publishedDate = new Date().toLocaleDateString('en-US', {
       year: 'numeric',
@@ -1040,7 +1070,8 @@ serve(async (req) => {
       slug: blogPost.slug,
       publishedDate,
       mainImage: blogPost.images.main,
-      secondaryImages: blogPost.images.secondary
+      secondaryImages: blogPost.images.secondary,
+      ga4PropertyId
     })
 
     // Get existing blog posts for the index
@@ -1077,14 +1108,20 @@ serve(async (req) => {
     ]
 
     // Generate blog index HTML
-    const blogIndexHtml = generateBlogIndexHtml(indexPosts)
+    const blogIndexHtml = generateBlogIndexHtml(indexPosts, ga4PropertyId)
 
     // Push files to GitHub
     console.log('Committing to GitHub...')
 
     const blogPostPath = `blog/${blogPost.slug}.html`
     const blogIndexPath = `blog.html`
-    const githubRepo = 'MrSparkle39/tic'
+    
+    // Get GitHub repo from database (format: "owner/repo")
+    const githubRepo = site.github_repo
+    if (!githubRepo) {
+      throw new Error('GitHub repository not configured for this site. Please add github_repo to the sites table.')
+    }
+    
     const branch = 'main'
 
     // Get current commit SHA for the branch

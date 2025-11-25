@@ -259,6 +259,7 @@ export type Database = {
       sites: {
         Row: {
           created_at: string | null
+          github_repo: string | null
           id: string
           last_updated: string | null
           launched_date: string | null
@@ -270,6 +271,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          github_repo?: string | null
           id?: string
           last_updated?: string | null
           launched_date?: string | null
@@ -281,6 +283,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          github_repo?: string | null
           id?: string
           last_updated?: string | null
           launched_date?: string | null
