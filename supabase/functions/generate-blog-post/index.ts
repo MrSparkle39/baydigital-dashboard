@@ -74,7 +74,7 @@ serve(async (req) => {
     // Add main prompt
     messageContent.push({
       type: 'text',
-      content: `You are a professional ${tone} content writer. Write a comprehensive, SEO-optimized blog post in ${language} about: "${topic}".
+      text: `You are a professional ${tone} content writer. Write a comprehensive, SEO-optimized blog post in ${language} about: "${topic}".
 
 Requirements:
 - 800-1200 words
@@ -119,15 +119,22 @@ Do not include any text outside the JSON object.`
     })
 
     if (!claudeResponse.ok) {
-      throw new Error('Failed to generate blog post with Claude')
+      const errorText = await claudeResponse.text()
+      console.error('Claude API error:', claudeResponse.status, errorText)
+      throw new Error(`Failed to generate blog post with Claude: ${claudeResponse.status}`)
     }
 
     const claudeData = await claudeResponse.json()
+    console.log('Claude response received:', JSON.stringify(claudeData).substring(0, 200))
+    
     let content = claudeData?.content?.[0]?.text as string
 
     if (!content || typeof content !== 'string') {
+      console.error('Invalid Claude response structure:', claudeData)
       throw new Error('Claude response missing text content')
     }
+
+    console.log('Raw content from Claude:', content.substring(0, 200))
 
     let jsonText = content.trim()
     if (jsonText.startsWith('```')) {
@@ -138,13 +145,16 @@ Do not include any text outside the JSON object.`
       }
     }
 
+    console.log('Cleaned JSON text:', jsonText.substring(0, 200))
+
     let blogData
     try {
       blogData = JSON.parse(jsonText)
+      console.log('Successfully parsed blog data')
     } catch (parseError) {
       console.error('Failed to parse Claude JSON:', {
         error: parseError instanceof Error ? parseError.message : String(parseError),
-        snippet: jsonText.slice(0, 200),
+        snippet: jsonText.slice(0, 500),
       })
       throw new Error('Failed to parse AI response. Please try again.')
     }
@@ -155,6 +165,8 @@ Do not include any text outside the JSON object.`
       month: 'long',
       day: 'numeric'
     })
+
+    console.log('Blog data prepared successfully')
 
     // Return preview data if in preview mode
     if (preview) {
