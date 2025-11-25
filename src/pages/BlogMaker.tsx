@@ -106,39 +106,38 @@ export default function BlogMaker() {
       const images = (data.data || []).map((item: any) => {
         console.log('Processing item:', item.id, 'Full item:', item); // Log each item
         
-        // Try multiple thumbnail paths in order of preference
+        // Freepik's img.b2bpic.net URLs have broken SSL certificates
+        // We'll use Freepik CDN pattern instead: convert the source URL
         let thumbnailUrl = null;
+        let mainUrl = null;
         
-        // Check various possible thumbnail locations in Freepik response
-        if (item.thumbnails) {
-          thumbnailUrl = item.thumbnails[0]?.url || item.thumbnails.medium || item.thumbnails.small;
-        } else if (item.image?.thumbnails) {
-          thumbnailUrl = item.image.thumbnails.medium?.url || 
-                        item.image.thumbnails.small?.url ||
-                        item.image.thumbnails[0]?.url;
-        } else if (item.thumbnail) {
-          thumbnailUrl = item.thumbnail.url || item.thumbnail;
+        // Get the source URL and try to construct a working Freepik CDN URL
+        const sourceUrl = item.image?.source?.url;
+        
+        if (sourceUrl && sourceUrl.includes('img.b2bpic.net')) {
+          // Replace broken domain with Freepik CDN
+          thumbnailUrl = sourceUrl.replace('img.b2bpic.net', 'img.freepik.com');
+          mainUrl = thumbnailUrl;
+        } else if (sourceUrl) {
+          thumbnailUrl = sourceUrl;
+          mainUrl = sourceUrl;
+        } else {
+          // Fallback to webpage URL if no image source
+          mainUrl = item.url;
+          thumbnailUrl = item.url;
         }
-        
-        // Fallback to preview or main URL
-        const mainUrl = item.image?.source?.url || 
-                       item.image?.url || 
-                       item.preview?.url ||
-                       item.url;
-        
-        const finalThumbnail = thumbnailUrl || mainUrl;
         
         console.log('Final URLs:', { 
           id: item.id, 
-          thumbnail: finalThumbnail,
+          thumbnail: thumbnailUrl,
           main: mainUrl,
-          hasThumb: !!thumbnailUrl 
+          originalSource: sourceUrl?.substring(0, 80)
         });
         
         return {
           id: String(item.id),
           url: mainUrl,
-          thumbnail: finalThumbnail,
+          thumbnail: thumbnailUrl,
           title: item.title || item.description || 'Untitled',
         } as FreepikImage;
       });
