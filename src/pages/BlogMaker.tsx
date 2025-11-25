@@ -100,10 +100,12 @@ export default function BlogMaker() {
 
       const data = await response.json();
       
-      console.log('Freepik API sample response:', data.data?.[0]); // Debug log
+      console.log('Freepik API full response structure:', JSON.stringify(data.data?.[0], null, 2)); // Full response
       
       // Normalize Freepik data into a common image shape
       const images = (data.data || []).map((item: any) => {
+        console.log('Processing item:', item.id, 'Full item:', item); // Log each item
+        
         // Try multiple thumbnail paths in order of preference
         let thumbnailUrl = null;
         
@@ -126,9 +128,10 @@ export default function BlogMaker() {
         
         const finalThumbnail = thumbnailUrl || mainUrl;
         
-        console.log('Image mapping:', { 
+        console.log('Final URLs:', { 
           id: item.id, 
-          thumbnail: finalThumbnail?.substring(0, 50),
+          thumbnail: finalThumbnail,
+          main: mainUrl,
           hasThumb: !!thumbnailUrl 
         });
         
