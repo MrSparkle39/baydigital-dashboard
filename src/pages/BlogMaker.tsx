@@ -192,10 +192,10 @@ export default function BlogMaker() {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Check file type
-    const allowedTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/msword', 'text/plain'];
+    // Check file type - only PDF supported by Claude API
+    const allowedTypes = ['application/pdf'];
     if (!allowedTypes.includes(file.type)) {
-      toast.error("Please upload a PDF, Word document, or text file");
+      toast.error("Please upload a PDF file. Word documents are not yet supported.");
       return;
     }
 
@@ -206,17 +206,7 @@ export default function BlogMaker() {
     }
 
     setUploadedFile(file);
-    
-    // For text files, read directly
-    if (file.type === 'text/plain') {
-      const text = await file.text();
-      setFileContent(text);
-      toast.success("File uploaded successfully");
-    } else {
-      // For PDFs and Word docs, we'll send to API to extract content
-      toast.success("File uploaded. Content will be extracted during generation.");
-      setFileContent(""); // Clear any previous content
-    }
+    toast.success("PDF uploaded successfully. Content will be used to inform the blog post.");
   };
 
   // Remove uploaded file
@@ -521,12 +511,12 @@ export default function BlogMaker() {
 
                   <div className="space-y-2">
                     <Label htmlFor="file-upload">Upload Reference Document (Optional)</Label>
-                    <p className="text-sm text-gray-500">Upload a PDF, Word doc, or text file to provide context for the blog post</p>
+                    <p className="text-sm text-gray-500">Upload a PDF to provide context for the blog post (Word docs coming soon)</p>
                     <div className="flex items-center gap-2">
                       <Input
                         id="file-upload"
                         type="file"
-                        accept=".pdf,.doc,.docx,.txt"
+                        accept=".pdf"
                         onChange={handleFileUpload}
                         className="cursor-pointer"
                       />
