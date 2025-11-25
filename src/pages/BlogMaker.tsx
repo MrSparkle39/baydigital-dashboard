@@ -45,6 +45,8 @@ export default function BlogMaker() {
   const [cta, setCta] = useState("");
   const [tone, setTone] = useState("professional");
   const [language, setLanguage] = useState("English");
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [fileContent, setFileContent] = useState<string>("");
   
   // Image selection
   const [imageSearch, setImageSearch] = useState("");
@@ -52,6 +54,8 @@ export default function BlogMaker() {
   const [selectedImages, setSelectedImages] = useState<FreepikImage[]>([]);
   const [mainImageId, setMainImageId] = useState<string>("");
   const [loadingImages, setLoadingImages] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMoreResults, setHasMoreResults] = useState(false);
   
   // Preview & editing
   const [blogPost, setBlogPost] = useState<BlogPost | null>(null);
@@ -59,12 +63,14 @@ export default function BlogMaker() {
   const [isPublishing, setIsPublishing] = useState(false);
   
   // Search Freepik images
-  const searchImages = async () => {
+  const searchImages = async (loadMore = false) => {
     if (!imageSearch.trim()) {
       toast.error("Please enter a search term");
       return;
     }
 
+    const pageToFetch = loadMore ? currentPage + 1 : 1;
+    
     setLoadingImages(true);
     try {
       const { data: session } = await supabase.auth.getSession();
@@ -81,6 +87,7 @@ export default function BlogMaker() {
           body: JSON.stringify({ 
             action: 'search',
             query: imageSearch,
+            page: pageToFetch,
             limit: 20
           }),
         }
@@ -95,19 +102,38 @@ export default function BlogMaker() {
       
       // Normalize Freepik data into a common image shape
       const images = (data.data || []).map((item: any) => {
+        // Try multiple thumbnail paths in order of preference
+        const thumbnailUrl = item.image?.thumbnails?.medium?.url || 
+                           item.image?.thumbnails?.small?.url ||
+                           item.thumbnail?.url ||
+                           item.image?.source?.url || 
+                           item.image?.url || 
+                           item.url;
+        
         const mainUrl = item.image?.source?.url || item.image?.url || item.url;
+        
         return {
           id: String(item.id),
           url: mainUrl,
-          // Use the same main URL for thumbnail to ensure it actually loads
-          thumbnail: mainUrl,
+          // Use dedicated thumbnail or fallback to main URL
+          thumbnail: thumbnailUrl || mainUrl,
           title: item.title || item.description || 'Untitled',
         } as FreepikImage;
       });
       
-      setSearchResults(images);
+      // Append or replace results based on loadMore flag
+      if (loadMore) {
+        setSearchResults(prev => [...prev, ...images]);
+        setCurrentPage(pageToFetch);
+      } else {
+        setSearchResults(images);
+        setCurrentPage(1);
+      }
       
-      if (images.length === 0) {
+      // Check if there are more results available
+      setHasMoreResults(images.length === 20);
+      
+      if (images.length === 0 && !loadMore) {
         toast.info("No images found. Try a different search term.");
       }
     } catch (error) {
@@ -138,6 +164,44 @@ export default function BlogMaker() {
         setMainImageId(image.id);
       }
     }
+  };
+
+  // Handle file upload
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Check file type
+    const allowedTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/msword', 'text/plain'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error("Please upload a PDF, Word document, or text file");
+      return;
+    }
+
+    // Check file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("File size must be less than 10MB");
+      return;
+    }
+
+    setUploadedFile(file);
+    
+    // For text files, read directly
+    if (file.type === 'text/plain') {
+      const text = await file.text();
+      setFileContent(text);
+      toast.success("File uploaded successfully");
+    } else {
+      // For PDFs and Word docs, we'll send to API to extract content
+      toast.success("File uploaded. Content will be extracted during generation.");
+      setFileContent(""); // Clear any previous content
+    }
+  };
+
+  // Remove uploaded file
+  const removeFile = () => {
+    setUploadedFile(null);
+    setFileContent("");
   };
 
   // Generate blog post
@@ -175,6 +239,36 @@ export default function BlogMaker() {
         if (details.length > 0) {
           enhancedPrompt += "\n\nAdditional context:\n" + details.join("\n");
         }
+        
+        // Add file content if available
+        if (fileContent) {
+          enhancedPrompt += "\n\nReference Document Content:\n" + fileContent;
+        }
+      }
+
+      // Prepare request body
+      const requestBody: any = {
+        topic: enhancedPrompt,
+        tone,
+        language,
+        images: {
+          main: selectedImages.find(img => img.id === mainImageId)?.url,
+          secondary: selectedImages
+            .filter(img => img.id !== mainImageId)
+            .map(img => img.url),
+        },
+        preview: true, // Don't publish yet
+      };
+
+      // If there's a PDF or Word file, convert to base64 and include
+      if (uploadedFile && uploadedFile.type !== 'text/plain') {
+        const arrayBuffer = await uploadedFile.arrayBuffer();
+        const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+        requestBody.documentFile = {
+          data: base64,
+          mimeType: uploadedFile.type,
+          name: uploadedFile.name
+        };
       }
 
       const response = await fetch(
@@ -185,18 +279,7 @@ export default function BlogMaker() {
             "Content-Type": "application/json",
             Authorization: `Bearer ${session.session.access_token}`,
           },
-          body: JSON.stringify({
-            topic: enhancedPrompt,
-            tone,
-            language,
-            images: {
-              main: selectedImages.find(img => img.id === mainImageId)?.url,
-              secondary: selectedImages
-                .filter(img => img.id !== mainImageId)
-                .map(img => img.url),
-            },
-            preview: true, // Don't publish yet
-          }),
+          body: JSON.stringify(requestBody),
         }
       );
 
@@ -415,6 +498,35 @@ export default function BlogMaker() {
                     />
                   </div>
 
+                  <div className="space-y-2">
+                    <Label htmlFor="file-upload">Upload Reference Document (Optional)</Label>
+                    <p className="text-sm text-gray-500">Upload a PDF, Word doc, or text file to provide context for the blog post</p>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        id="file-upload"
+                        type="file"
+                        accept=".pdf,.doc,.docx,.txt"
+                        onChange={handleFileUpload}
+                        className="cursor-pointer"
+                      />
+                      {uploadedFile && (
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          onClick={removeFile}
+                        >
+                          Remove
+                        </Button>
+                      )}
+                    </div>
+                    {uploadedFile && (
+                      <p className="text-sm text-green-600">
+                        ✓ {uploadedFile.name} ({(uploadedFile.size / 1024).toFixed(1)} KB)
+                      </p>
+                    )}
+                  </div>
+
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="tone-detailed">Tone</Label>
@@ -469,7 +581,7 @@ export default function BlogMaker() {
                     onChange={(e) => setImageSearch(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && searchImages()}
                   />
-                  <Button onClick={searchImages} disabled={loadingImages}>
+                  <Button onClick={() => searchImages()} disabled={loadingImages}>
                     {loadingImages ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -497,6 +609,13 @@ export default function BlogMaker() {
                             src={image.thumbnail}
                             alt={image.title}
                             className="w-full h-40 object-cover rounded"
+                            onError={(e) => {
+                              // Fallback to main URL if thumbnail fails
+                              const target = e.target as HTMLImageElement;
+                              if (target.src !== image.url) {
+                                target.src = image.url;
+                              }
+                            }}
                           />
                           <div className="mt-2 flex items-center gap-2">
                             <RadioGroupItem value={image.id} id={image.id} />
@@ -521,7 +640,7 @@ export default function BlogMaker() {
 
               {/* Search Results */}
               {searchResults.length > 0 && (
-                <div className="space-y-2">
+                <div className="space-y-4">
                   <Label>Search Results (Click to select)</Label>
                   <div className="grid grid-cols-4 gap-4 max-h-[400px] overflow-y-auto">
                     {searchResults.map((image) => {
@@ -538,6 +657,13 @@ export default function BlogMaker() {
                             src={image.thumbnail}
                             alt={image.title}
                             className="w-full h-32 object-cover rounded"
+                            onError={(e) => {
+                              // Fallback to main URL if thumbnail fails
+                              const target = e.target as HTMLImageElement;
+                              if (target.src !== image.url) {
+                                target.src = image.url;
+                              }
+                            }}
                           />
                           {isSelected && (
                             <div className="mt-1 text-xs text-primary font-semibold text-center">
@@ -548,6 +674,24 @@ export default function BlogMaker() {
                       );
                     })}
                   </div>
+                  {hasMoreResults && (
+                    <div className="flex justify-center">
+                      <Button 
+                        onClick={() => searchImages(true)} 
+                        disabled={loadingImages}
+                        variant="outline"
+                      >
+                        {loadingImages ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Loading More...
+                          </>
+                        ) : (
+                          "Load More Images"
+                        )}
+                      </Button>
+                    </div>
+                  )}
                 </div>
               )}
 

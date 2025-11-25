@@ -38,7 +38,7 @@ serve(async (req) => {
       throw new Error('Unauthorized')
     }
 
-    const { topic, tone, language, images, preview } = await req.json()
+    const { topic, tone, language, images, preview, documentFile } = await req.json()
 
     const { data: sites, error: sitesError } = await supabaseClient
       .from('sites')
@@ -52,21 +52,29 @@ serve(async (req) => {
 
     const site = sites[0]
 
-    // Generate blog post with Claude
-    console.log('Generating blog post with Claude...')
-    const claudeResponse = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 4096,
-        messages: [{
-          role: 'user',
-          content: `You are a professional ${tone} content writer. Write a comprehensive, SEO-optimized blog post in ${language} about: "${topic}".
+    // Prepare content for Claude API
+    const messageContent: any[] = [];
+    
+    // Add document file if provided (PDF or Word)
+    if (documentFile?.data && documentFile?.mimeType) {
+      messageContent.push({
+        type: 'document',
+        source: {
+          type: 'base64',
+          media_type: documentFile.mimeType,
+          data: documentFile.data
+        }
+      });
+      messageContent.push({
+        type: 'text',
+        text: `Above is a reference document. Please review its content to inform your blog post writing.`
+      });
+    }
+    
+    // Add main prompt
+    messageContent.push({
+      type: 'text',
+      content: `You are a professional ${tone} content writer. Write a comprehensive, SEO-optimized blog post in ${language} about: "${topic}".
 
 Requirements:
 - 800-1200 words
@@ -89,6 +97,23 @@ Return ONLY a JSON object with this exact structure:
 }
 
 Do not include any text outside the JSON object.`
+    });
+
+    // Generate blog post with Claude
+    console.log('Generating blog post with Claude...')
+    const claudeResponse = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 4096,
+        messages: [{
+          role: 'user',
+          content: messageContent
         }]
       })
     })
