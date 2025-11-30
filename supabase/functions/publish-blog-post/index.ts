@@ -1035,7 +1035,7 @@ serve(async (req) => {
 
     const { data: sites, error: sitesError } = await supabaseClient
       .from('sites')
-      .select('*')
+      .select('id, user_id, site_url, github_repo')
       .eq('user_id', user.id)
       .limit(1)
 
