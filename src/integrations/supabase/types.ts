@@ -489,6 +489,7 @@ export type Database = {
           freepik_downloads_used: number | null
           freepik_period_start: string | null
           full_name: string | null
+          ga4_measurement_id: string | null
           ga4_property_id: string | null
           id: string
           industry: string | null
@@ -555,6 +556,7 @@ export type Database = {
           freepik_downloads_used?: number | null
           freepik_period_start?: string | null
           full_name?: string | null
+          ga4_measurement_id?: string | null
           ga4_property_id?: string | null
           id: string
           industry?: string | null
@@ -621,6 +623,7 @@ export type Database = {
           freepik_downloads_used?: number | null
           freepik_period_start?: string | null
           full_name?: string | null
+          ga4_measurement_id?: string | null
           ga4_property_id?: string | null
           id?: string
           industry?: string | null
