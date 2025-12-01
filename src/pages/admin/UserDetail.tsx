@@ -30,6 +30,7 @@ export default function AdminUserDetail() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
   const [ga4PropertyId, setGa4PropertyId] = useState("");
+  const [ga4MeasurementId, setGa4MeasurementId] = useState("");
   const [websiteStatus, setWebsiteStatus] = useState("");
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
@@ -50,6 +51,7 @@ export default function AdminUserDetail() {
     if (userResult.data) {
       setUser(userResult.data);
       setGa4PropertyId(userResult.data.ga4_property_id || "");
+      setGa4MeasurementId(userResult.data.ga4_measurement_id || "");
       setWebsiteStatus(userResult.data.website_status || "pending");
       setWebsiteUrl(userResult.data.website_url || "");
     }
@@ -67,6 +69,20 @@ export default function AdminUserDetail() {
       toast.error("Failed to update GA4 property ID");
     } else {
       toast.success("GA4 property ID updated successfully");
+      fetchUserData();
+    }
+  };
+
+  const saveGa4MeasurementId = async () => {
+    const { error } = await supabase
+      .from("users")
+      .update({ ga4_measurement_id: ga4MeasurementId })
+      .eq("id", userId!);
+
+    if (error) {
+      toast.error("Failed to update GA4 measurement ID");
+    } else {
+      toast.success("GA4 measurement ID updated successfully");
       fetchUserData();
     }
   };
@@ -631,6 +647,32 @@ export default function AdminUserDetail() {
                 <div className="p-4 bg-success/10 border border-success rounded-md">
                   <p className="text-sm text-success font-medium">
                     ✓ GA4 configured - Analytics will be visible in user's dashboard
+                  </p>
+                </div>
+              )}
+
+              <div>
+                <Label htmlFor="ga4MeasurementId">GA4 Measurement ID (for Blog Posts)</Label>
+                <div className="flex gap-2 mt-1">
+                  <Input
+                    id="ga4MeasurementId"
+                    value={ga4MeasurementId}
+                    onChange={(e) => setGa4MeasurementId(e.target.value)}
+                    placeholder="e.g., G-XXXXXXXXXX"
+                  />
+                  <Button onClick={saveGa4MeasurementId}>
+                    <Save className="h-4 w-4 mr-2" />
+                    Save
+                  </Button>
+                </div>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Enter the GA4 Measurement ID (starts with G-) to automatically add Google Analytics tracking code to published blog posts.
+                </p>
+              </div>
+              {user.ga4_measurement_id && (
+                <div className="p-4 bg-success/10 border border-success rounded-md">
+                  <p className="text-sm text-success font-medium">
+                    ✓ GA4 Measurement ID configured - Blog posts will include Google Analytics tracking
                   </p>
                 </div>
               )}

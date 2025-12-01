@@ -1045,14 +1045,14 @@ serve(async (req) => {
 
     const site = sites[0]
 
-    // Fetch user's GA4 property ID for analytics tracking
+    // Fetch user's GA4 measurement ID for analytics tracking
     const { data: userData } = await supabaseClient
       .from('users')
-      .select('ga4_property_id')
+      .select('ga4_measurement_id')
       .eq('id', user.id)
       .single()
 
-    const ga4PropertyId = userData?.ga4_property_id || null
+    const ga4PropertyId = userData?.ga4_measurement_id || null
 
     // Format date
     const publishedDate = new Date().toLocaleDateString('en-US', {
