@@ -110,7 +110,7 @@ Do not include any text outside the JSON object.`
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 4096,
+        max_tokens: 8192,
         messages: [{
           role: 'user',
           content: messageContent
