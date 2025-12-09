@@ -23,3 +23,9 @@ verify_jwt = true
 
 [functions.publish-blog-post]
 verify_jwt = true
+
+[functions.generate-social-post]
+verify_jwt = true
+
+[functions.post-to-social-media]
+verify_jwt = true
