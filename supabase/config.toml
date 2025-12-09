@@ -29,3 +29,6 @@ verify_jwt = true
 
 [functions.post-to-social-media]
 verify_jwt = true
+
+[functions.facebook-oauth-callback]
+verify_jwt = false
