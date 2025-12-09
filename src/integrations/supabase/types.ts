@@ -303,6 +303,113 @@ export type Database = {
           },
         ]
       }
+      social_media_connections: {
+        Row: {
+          access_token: string
+          created_at: string | null
+          id: string
+          instagram_account_id: string | null
+          instagram_username: string | null
+          page_id: string | null
+          page_name: string | null
+          platform: string
+          token_expires_at: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          access_token: string
+          created_at?: string | null
+          id?: string
+          instagram_account_id?: string | null
+          instagram_username?: string | null
+          page_id?: string | null
+          page_name?: string | null
+          platform: string
+          token_expires_at?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          access_token?: string
+          created_at?: string | null
+          id?: string
+          instagram_account_id?: string | null
+          instagram_username?: string | null
+          page_id?: string | null
+          page_name?: string | null
+          platform?: string
+          token_expires_at?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      social_media_posts: {
+        Row: {
+          created_at: string | null
+          error_message: string | null
+          facebook_post_id: string | null
+          facebook_post_url: string | null
+          headline: string | null
+          id: string
+          image_url: string | null
+          instagram_post_id: string | null
+          instagram_post_url: string | null
+          platforms: string[]
+          post_text: string
+          published_at: string | null
+          site_id: string | null
+          status: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          error_message?: string | null
+          facebook_post_id?: string | null
+          facebook_post_url?: string | null
+          headline?: string | null
+          id?: string
+          image_url?: string | null
+          instagram_post_id?: string | null
+          instagram_post_url?: string | null
+          platforms: string[]
+          post_text: string
+          published_at?: string | null
+          site_id?: string | null
+          status?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          error_message?: string | null
+          facebook_post_id?: string | null
+          facebook_post_url?: string | null
+          headline?: string | null
+          id?: string
+          image_url?: string | null
+          instagram_post_id?: string | null
+          instagram_post_url?: string | null
+          platforms?: string[]
+          post_text?: string
+          published_at?: string | null
+          site_id?: string | null
+          status?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_media_posts_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ticket_message_reads: {
         Row: {
           id: string
