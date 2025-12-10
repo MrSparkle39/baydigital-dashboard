@@ -50,6 +50,29 @@ export default function SocialMediaManager() {
   // Load social media connections
   useEffect(() => {
     loadConnections();
+    
+    // Check for OAuth callback results
+    const urlParams = new URLSearchParams(window.location.search);
+    const success = urlParams.get('success');
+    const error = urlParams.get('error');
+    const pageName = urlParams.get('page');
+    
+    if (success === 'true') {
+      toast.success(
+        <div>
+          <p className="font-semibold">Successfully connected!</p>
+          <p className="text-sm">Connected to: {pageName}</p>
+        </div>
+      );
+      // Clean up URL
+      window.history.replaceState({}, '', '/social-media');
+      // Reload connections
+      loadConnections();
+    } else if (error) {
+      toast.error(`Connection failed: ${decodeURIComponent(error)}`);
+      // Clean up URL
+      window.history.replaceState({}, '', '/social-media');
+    }
   }, []);
 
   const loadConnections = async () => {
@@ -298,9 +321,34 @@ export default function SocialMediaManager() {
     }
   };
 
-  const connectFacebook = () => {
-    // TODO: Implement Facebook OAuth flow
-    toast.info("Facebook connection coming soon!");
+  const connectFacebook = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("Please log in first");
+        return;
+      }
+
+      // Build Facebook OAuth URL
+      const fbAppId = "1101737005230579"; // Your Facebook App ID
+      const redirectUri = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/facebook-oauth-callback`;
+      const scope = "pages_show_list,pages_read_engagement,pages_manage_posts,instagram_basic,instagram_content_publish";
+      const state = user.id; // Pass user ID to callback
+
+      const oauthUrl = 
+        `https://www.facebook.com/v18.0/dialog/oauth?` +
+        `client_id=${fbAppId}&` +
+        `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+        `scope=${encodeURIComponent(scope)}&` +
+        `state=${state}&` +
+        `response_type=code`;
+
+      // Redirect to Facebook
+      window.location.href = oauthUrl;
+    } catch (error) {
+      console.error("Error initiating Facebook connection:", error);
+      toast.error("Failed to connect to Facebook");
+    }
   };
 
   const hasFacebookConnection = connections.some(c => c.platform === 'facebook');
