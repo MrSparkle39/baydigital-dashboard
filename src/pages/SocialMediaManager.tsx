@@ -329,11 +329,12 @@ export default function SocialMediaManager() {
         return;
       }
 
-      // Build Facebook OAuth URL
-      const fbAppId = "1101737005230579"; // Your Facebook App ID
+      // Build Facebook OAuth URL - using only permissions available without app review
+      const fbAppId = "1101737005230579";
       const redirectUri = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/facebook-oauth-callback`;
-      const scope = "pages_show_list,pages_read_engagement,pages_manage_posts,instagram_basic,instagram_content_publish";
-      const state = user.id; // Pass user ID to callback
+      // Only request permissions that are available in Development mode
+      const scope = "pages_show_list,pages_manage_posts";
+      const state = user.id;
 
       const oauthUrl = 
         `https://www.facebook.com/v18.0/dialog/oauth?` +
