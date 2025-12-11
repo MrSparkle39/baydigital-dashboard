@@ -23,7 +23,6 @@ serve(async (req) => {
 
     if (error) {
       console.error('Facebook OAuth error:', error)
-      // Redirect back to dashboard with error
       return Response.redirect(
         `${Deno.env.get('DASHBOARD_URL')}/social-media?error=${encodeURIComponent(error)}`,
         302
@@ -77,31 +76,55 @@ serve(async (req) => {
 
     console.log('Got long-lived token, fetching user pages...')
 
-    // Get user's pages
-    const pagesResponse = await fetch(
-      `https://graph.facebook.com/v18.0/me/accounts?access_token=${accessToken}`
+    // First, let's debug what permissions we actually have
+    const debugResponse = await fetch(
+      `https://graph.facebook.com/v18.0/me/permissions?access_token=${accessToken}`
     )
-
-    if (!pagesResponse.ok) {
-      throw new Error('Failed to fetch user pages')
+    if (debugResponse.ok) {
+      const debugData = await debugResponse.json()
+      console.log('Granted permissions:', JSON.stringify(debugData.data))
     }
 
+    // Get user's pages with explicit fields
+    const pagesResponse = await fetch(
+      `https://graph.facebook.com/v18.0/me/accounts?fields=id,name,access_token,category,tasks&access_token=${accessToken}`
+    )
+
     const pagesData = await pagesResponse.json()
+    console.log('Pages API response:', JSON.stringify(pagesData))
+
+    if (!pagesResponse.ok) {
+      console.error('Pages API error:', pagesData)
+      throw new Error(pagesData.error?.message || 'Failed to fetch user pages')
+    }
+
     const pages = pagesData.data || []
 
     if (pages.length === 0) {
-      throw new Error('No Facebook Pages found. You need to be an admin of at least one Facebook Page.')
+      // Check if this is a permissions issue
+      const permCheck = await fetch(
+        `https://graph.facebook.com/v18.0/me?fields=id,name&access_token=${accessToken}`
+      )
+      const userData = await permCheck.json()
+      console.log('User data:', JSON.stringify(userData))
+      
+      throw new Error(
+        'No Facebook Pages found. This usually means: ' +
+        '1) Your Facebook app is in Development mode - add yourself as a Tester in Facebook Developer Console, OR ' +
+        '2) You did not grant page permissions during login - try disconnecting and reconnecting, OR ' +
+        '3) You are not an admin of any Facebook Pages.'
+      )
     }
 
-    console.log(`Found ${pages.length} pages`)
+    console.log(`Found ${pages.length} pages:`, pages.map((p: any) => p.name).join(', '))
 
     // For now, use the first page (in production, you'd let user choose)
     const page = pages[0]
-    const pageAccessToken = page.access_token // Page token, not user token
+    const pageAccessToken = page.access_token
     const pageId = page.id
     const pageName = page.name
 
-    console.log('Using page:', pageName)
+    console.log('Using page:', pageName, 'with tasks:', page.tasks)
 
     // Check if page has Instagram connected
     let instagramAccountId = null
