@@ -332,8 +332,8 @@ export default function SocialMediaManager() {
       // Build Facebook OAuth URL - using only permissions available without app review
       const fbAppId = "1101737005230579";
       const redirectUri = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/facebook-oauth-callback`;
-      // Need pages_read_user_content to see the list of pages via /me/accounts
-      const scope = "pages_show_list,pages_manage_posts,pages_read_user_content";
+      // Need business_management to access pages owned by Business Portfolios
+      const scope = "pages_show_list,pages_manage_posts,pages_read_user_content,business_management";
       const state = user.id;
 
       const oauthUrl = 
