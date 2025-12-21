@@ -6,8 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Loader2, Sparkles, Share2, Facebook, Instagram, Image as ImageIcon, RefreshCw, Search, X, Type } from "lucide-react";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Loader2, Sparkles, Share2, Facebook, Instagram, Image as ImageIcon, Search, X, Type, Upload, ChevronDown } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -34,6 +33,18 @@ export default function SocialMediaManager() {
   const [searchResults, setSearchResults] = useState<FreepikImage[]>([]);
   const [selectedImage, setSelectedImage] = useState<FreepikImage | null>(null);
   const [postType, setPostType] = useState<"text" | "image">("text");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMoreImages, setHasMoreImages] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  
+  // Custom image upload state
+  const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // AI caption state
+  const [captionMode, setCaptionMode] = useState<"manual" | "ai">("manual");
+  const [aiTopic, setAiTopic] = useState("");
+  const [isGeneratingCaption, setIsGeneratingCaption] = useState(false);
   
   const [platforms, setPlatforms] = useState({
     facebook: false,
@@ -100,13 +111,19 @@ export default function SocialMediaManager() {
   };
 
   // Search for images using Freepik API
-  const searchImages = async () => {
+  const searchImages = async (page = 1, append = false) => {
     if (!imageSearchQuery.trim()) {
       toast.error("Please enter a search term");
       return;
     }
 
-    setIsSearchingImages(true);
+    if (append) {
+      setIsLoadingMore(true);
+    } else {
+      setIsSearchingImages(true);
+      setSearchResults([]);
+    }
+    
     try {
       const { data: session } = await supabase.auth.getSession();
       if (!session.session) throw new Error("Not authenticated");
@@ -122,8 +139,8 @@ export default function SocialMediaManager() {
           body: JSON.stringify({
             action: "search",
             query: imageSearchQuery,
-            page: 1,
-            limit: 9,
+            page: page,
+            limit: 12,
             filters: { type: "photo" }
           }),
         }
@@ -134,14 +151,24 @@ export default function SocialMediaManager() {
       const data = await response.json();
       const images = data.data || [];
       
-      setSearchResults(images.map((img: any) => ({
+      const mappedImages = images.map((img: any) => ({
         id: img.id || String(Math.random()),
         title: img.title || "Stock Image",
         thumbnail: { url: img.thumbnail?.url || img.image?.source?.url },
         preview: { url: img.preview?.url || img.image?.source?.url || img.thumbnail?.url }
-      })));
+      }));
       
-      if (images.length === 0) {
+      if (append) {
+        setSearchResults(prev => [...prev, ...mappedImages]);
+      } else {
+        setSearchResults(mappedImages);
+      }
+      
+      setCurrentPage(page);
+      // Check if there are more images (Freepik typically returns metadata about total)
+      setHasMoreImages(images.length === 12);
+      
+      if (images.length === 0 && !append) {
         toast.info("No images found. Try a different search term.");
       }
     } catch (error) {
@@ -149,6 +176,74 @@ export default function SocialMediaManager() {
       toast.error("Failed to search images");
     } finally {
       setIsSearchingImages(false);
+      setIsLoadingMore(false);
+    }
+  };
+
+  const loadMoreImages = () => {
+    searchImages(currentPage + 1, true);
+  };
+
+  // Handle custom image upload
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error("Please upload an image file");
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Image must be less than 10MB");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const result = e.target?.result as string;
+      setUploadedImage(result);
+      setSelectedImage(null); // Clear any selected stock image
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Generate AI caption
+  const generateAICaption = async () => {
+    setIsGeneratingCaption(true);
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      if (!session.session) throw new Error("Not authenticated");
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-social-caption`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.session.access_token}`,
+          },
+          body: JSON.stringify({
+            topic: aiTopic,
+            platform: platforms.instagram ? 'Instagram' : 'Facebook',
+            tone: 'professional and friendly'
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to generate caption");
+      }
+
+      const data = await response.json();
+      setPostText(data.caption);
+      toast.success("Caption generated!");
+    } catch (error) {
+      console.error("Error generating caption:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to generate caption");
+    } finally {
+      setIsGeneratingCaption(false);
     }
   };
 
@@ -177,9 +272,17 @@ export default function SocialMediaManager() {
       let imageUrl = null;
       
       // If posting with image, get the image URL
-      if (postType === "image" && selectedImage) {
-        toast.info("Preparing image...");
-        imageUrl = selectedImage.preview.url;
+      if (postType === "image") {
+        if (uploadedImage) {
+          // For uploaded images, we need to handle base64
+          // For now, we'll use the stock image URL approach
+          // A full implementation would upload to storage first
+          toast.info("Preparing image...");
+          imageUrl = uploadedImage;
+        } else if (selectedImage) {
+          toast.info("Preparing image...");
+          imageUrl = selectedImage.preview.url;
+        }
       }
 
       // Post to social media
@@ -223,8 +326,10 @@ export default function SocialMediaManager() {
         // Reset form
         setPostText("");
         setSelectedImage(null);
+        setUploadedImage(null);
         setSearchResults([]);
         setImageSearchQuery("");
+        setAiTopic("");
       } else {
         const errors = [];
         if (data.facebook?.error) errors.push(`Facebook: ${data.facebook.error}`);
@@ -270,10 +375,19 @@ export default function SocialMediaManager() {
     }
   };
 
+  const clearSelectedImage = () => {
+    setSelectedImage(null);
+    setUploadedImage(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   const hasFacebookConnection = connections.some(c => c.platform === 'facebook');
   const hasInstagramConnection = connections.some(c => c.platform === 'facebook' && c.instagram_username);
   const facebookPageName = connections.find(c => c.platform === 'facebook')?.page_name;
   const instagramUsername = connections.find(c => c.platform === 'facebook')?.instagram_username;
+  const hasImage = selectedImage || uploadedImage;
 
   return (
     <div className="container mx-auto py-8 max-w-4xl">
@@ -336,9 +450,61 @@ export default function SocialMediaManager() {
             </Tabs>
           </div>
 
+          {/* Caption Mode Selection */}
+          <div className="space-y-2">
+            <Label>Caption</Label>
+            <Tabs value={captionMode} onValueChange={(v) => setCaptionMode(v as "manual" | "ai")} className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="manual" className="flex items-center gap-2">
+                  <Type className="h-4 w-4" />
+                  Write Your Own
+                </TabsTrigger>
+                <TabsTrigger value="ai" className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4" />
+                  AI Generated
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+
+          {/* AI Caption Generator */}
+          {captionMode === "ai" && (
+            <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
+              <div className="space-y-2">
+                <Label htmlFor="aiTopic">What is your post about? (optional)</Label>
+                <Input
+                  id="aiTopic"
+                  placeholder="e.g., New product launch, Holiday sale, Team update..."
+                  value={aiTopic}
+                  onChange={(e) => setAiTopic(e.target.value)}
+                />
+              </div>
+              <Button 
+                onClick={generateAICaption} 
+                disabled={isGeneratingCaption}
+                variant="secondary"
+                className="w-full"
+              >
+                {isGeneratingCaption ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    Generate Caption
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
+
           {/* Post Text */}
           <div className="space-y-2">
-            <Label htmlFor="postText">Post Text</Label>
+            <Label htmlFor="postText">
+              {captionMode === "ai" ? "Generated Caption (edit if needed)" : "Post Text"}
+            </Label>
             <Textarea
               id="postText"
               placeholder="What do you want to share?"
@@ -349,20 +515,53 @@ export default function SocialMediaManager() {
             <p className="text-xs text-muted-foreground">{postText.length} characters</p>
           </div>
 
-          {/* Image Search Section - Only show if image type selected */}
+          {/* Image Section - Only show if image type selected */}
           {postType === "image" && (
             <div className="space-y-4">
+              {/* Upload Your Own */}
               <div className="space-y-2">
-                <Label>Search for Image</Label>
+                <Label>Upload Your Own Image</Label>
                 <div className="flex gap-2">
-                  <Input
-                    placeholder="Search Freepik for images..."
-                    value={imageSearchQuery}
-                    onChange={(e) => setImageSearchQuery(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && searchImages()}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="hidden"
                   />
                   <Button 
-                    onClick={searchImages} 
+                    variant="outline" 
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex-1"
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Choose Image
+                  </Button>
+                </div>
+              </div>
+
+              {/* OR Divider */}
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">or search stock photos</span>
+                </div>
+              </div>
+
+              {/* Stock Photo Search */}
+              <div className="space-y-2">
+                <Label>Search Stock Photos</Label>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Search for stock photos..."
+                    value={imageSearchQuery}
+                    onChange={(e) => setImageSearchQuery(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && searchImages(1, false)}
+                  />
+                  <Button 
+                    onClick={() => searchImages(1, false)} 
                     disabled={isSearchingImages || !imageSearchQuery.trim()}
                     variant="secondary"
                   >
@@ -375,21 +574,21 @@ export default function SocialMediaManager() {
                 </div>
               </div>
 
-              {/* Selected Image Preview */}
-              {selectedImage && (
+              {/* Selected/Uploaded Image Preview */}
+              {hasImage && (
                 <div className="space-y-2">
                   <Label>Selected Image</Label>
                   <div className="relative inline-block">
                     <img
-                      src={selectedImage.preview.url}
-                      alt={selectedImage.title}
+                      src={uploadedImage || selectedImage?.preview.url}
+                      alt={selectedImage?.title || "Uploaded image"}
                       className="max-h-48 rounded-lg border"
                     />
                     <Button
                       size="icon"
                       variant="destructive"
                       className="absolute -top-2 -right-2 h-6 w-6"
-                      onClick={() => setSelectedImage(null)}
+                      onClick={clearSelectedImage}
                     >
                       <X className="h-4 w-4" />
                     </Button>
@@ -398,14 +597,17 @@ export default function SocialMediaManager() {
               )}
 
               {/* Image Search Results */}
-              {searchResults.length > 0 && !selectedImage && (
-                <div className="space-y-2">
+              {searchResults.length > 0 && !hasImage && (
+                <div className="space-y-3">
                   <Label>Select an Image</Label>
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
                     {searchResults.map((image) => (
                       <div
                         key={image.id}
-                        onClick={() => setSelectedImage(image)}
+                        onClick={() => {
+                          setSelectedImage(image);
+                          setUploadedImage(null);
+                        }}
                         className="cursor-pointer rounded-lg overflow-hidden border-2 border-transparent hover:border-primary transition-all"
                       >
                         <img
@@ -416,12 +618,34 @@ export default function SocialMediaManager() {
                       </div>
                     ))}
                   </div>
+                  
+                  {/* Load More Button */}
+                  {hasMoreImages && (
+                    <Button 
+                      variant="outline" 
+                      onClick={loadMoreImages}
+                      disabled={isLoadingMore}
+                      className="w-full"
+                    >
+                      {isLoadingMore ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Loading...
+                        </>
+                      ) : (
+                        <>
+                          <ChevronDown className="h-4 w-4 mr-2" />
+                          Load More Photos
+                        </>
+                      )}
+                    </Button>
+                  )}
                 </div>
               )}
 
-              {postType === "image" && !selectedImage && searchResults.length === 0 && (
+              {postType === "image" && !hasImage && searchResults.length === 0 && (
                 <p className="text-sm text-muted-foreground">
-                  Search for an image above, or switch to "Text Only" for a text-only post.
+                  Upload your own image or search for stock photos above.
                 </p>
               )}
             </div>
@@ -468,7 +692,7 @@ export default function SocialMediaManager() {
               isPosting || 
               !postText.trim() || 
               (!platforms.facebook && !platforms.instagram) ||
-              (postType === "image" && !selectedImage)
+              (postType === "image" && !hasImage)
             }
             className="w-full"
             size="lg"
