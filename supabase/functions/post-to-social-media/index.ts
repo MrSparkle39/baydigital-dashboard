@@ -32,7 +32,12 @@ serve(async (req) => {
       throw new Error('Post text and platforms are required')
     }
 
-    console.log('Posting to platforms:', platforms)
+    // Instagram requires an image
+    if (platforms.includes('instagram') && !imageUrl) {
+      throw new Error('Instagram posts require an image')
+    }
+
+    console.log('Posting to platforms:', platforms, 'with image:', !!imageUrl)
 
     // Get user's social media connections
     const { data: connections, error: connectionsError } = await supabaseClient
@@ -64,20 +69,40 @@ serve(async (req) => {
         try {
           console.log('Posting to Facebook Page:', fbConnection.page_id)
           
-          const fbResponse = await fetch(
-            `https://graph.facebook.com/v18.0/${fbConnection.page_id}/photos`,
-            {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                url: imageUrl,
-                caption: postText,
-                access_token: fbConnection.access_token
-              })
-            }
-          )
+          let fbResponse;
+          
+          if (imageUrl) {
+            // Post with image using /photos endpoint
+            fbResponse = await fetch(
+              `https://graph.facebook.com/v18.0/${fbConnection.page_id}/photos`,
+              {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  url: imageUrl,
+                  caption: postText,
+                  access_token: fbConnection.access_token
+                })
+              }
+            )
+          } else {
+            // Text-only post using /feed endpoint
+            fbResponse = await fetch(
+              `https://graph.facebook.com/v18.0/${fbConnection.page_id}/feed`,
+              {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  message: postText,
+                  access_token: fbConnection.access_token
+                })
+              }
+            )
+          }
 
           if (!fbResponse.ok) {
             const errorData = await fbResponse.json()
