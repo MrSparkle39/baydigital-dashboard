@@ -6,6 +6,84 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// Helper function to download image and upload to Supabase storage
+async function getPublicImageUrl(imageUrl: string, supabaseClient: any, userId: string): Promise<string> {
+  // If it's already a Supabase storage URL, return as-is
+  if (imageUrl.includes('supabase.co/storage')) {
+    return imageUrl
+  }
+  
+  // If it's a base64 data URL, decode and upload
+  if (imageUrl.startsWith('data:image')) {
+    console.log('Processing base64 image...')
+    const matches = imageUrl.match(/^data:image\/(\w+);base64,(.+)$/)
+    if (!matches) {
+      throw new Error('Invalid base64 image format')
+    }
+    const ext = matches[1]
+    const base64Data = matches[2]
+    const binaryData = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0))
+    
+    const fileName = `social-post-${Date.now()}.${ext}`
+    const { data: uploadData, error: uploadError } = await supabaseClient.storage
+      .from('social-media-images')
+      .upload(`${userId}/${fileName}`, binaryData, {
+        contentType: `image/${ext}`,
+        upsert: false
+      })
+    
+    if (uploadError) {
+      console.error('Upload error:', uploadError)
+      throw new Error(`Failed to upload image: ${uploadError.message}`)
+    }
+    
+    const { data: { publicUrl } } = supabaseClient.storage
+      .from('social-media-images')
+      .getPublicUrl(`${userId}/${fileName}`)
+    
+    console.log('Uploaded base64 image to:', publicUrl)
+    return publicUrl
+  }
+  
+  // For external URLs (like Freepik), download and re-upload
+  console.log('Downloading external image from:', imageUrl)
+  try {
+    const response = await fetch(imageUrl)
+    if (!response.ok) {
+      throw new Error(`Failed to download image: ${response.status}`)
+    }
+    
+    const contentType = response.headers.get('content-type') || 'image/jpeg'
+    const ext = contentType.split('/')[1] || 'jpg'
+    const imageBlob = await response.blob()
+    const arrayBuffer = await imageBlob.arrayBuffer()
+    
+    const fileName = `social-post-${Date.now()}.${ext}`
+    const { data: uploadData, error: uploadError } = await supabaseClient.storage
+      .from('social-media-images')
+      .upload(`${userId}/${fileName}`, arrayBuffer, {
+        contentType: contentType,
+        upsert: false
+      })
+    
+    if (uploadError) {
+      console.error('Upload error:', uploadError)
+      throw new Error(`Failed to upload image: ${uploadError.message}`)
+    }
+    
+    const { data: { publicUrl } } = supabaseClient.storage
+      .from('social-media-images')
+      .getPublicUrl(`${userId}/${fileName}`)
+    
+    console.log('Re-uploaded image to Supabase:', publicUrl)
+    return publicUrl
+  } catch (error) {
+    console.error('Error processing image:', error)
+    // Return original URL as fallback (might work for Facebook)
+    return imageUrl
+  }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -14,6 +92,12 @@ serve(async (req) => {
   try {
     const authHeader = req.headers.get('Authorization')!
     const token = authHeader.replace('Bearer ', '')
+    
+    // Use service role key for storage operations
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    )
     
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -38,6 +122,14 @@ serve(async (req) => {
     }
 
     console.log('Posting to platforms:', platforms, 'with image:', !!imageUrl)
+    
+    // If posting to Instagram, we need a publicly accessible image URL
+    let publicImageUrl = imageUrl
+    if (imageUrl && platforms.includes('instagram')) {
+      console.log('Processing image for Instagram...')
+      publicImageUrl = await getPublicImageUrl(imageUrl, supabaseAdmin, user.id)
+      console.log('Public image URL:', publicImageUrl)
+    }
 
     // Get user's social media connections
     const { data: connections, error: connectionsError } = await supabaseClient
@@ -137,6 +229,7 @@ serve(async (req) => {
       } else {
         try {
           console.log('Posting to Instagram:', igConnection.instagram_account_id)
+          console.log('Using image URL:', publicImageUrl)
           
           // Step 1: Create media container
           const containerResponse = await fetch(
@@ -147,7 +240,7 @@ serve(async (req) => {
                 'Content-Type': 'application/json',
               },
               body: JSON.stringify({
-                image_url: imageUrl,
+                image_url: publicImageUrl,
                 caption: postText,
                 access_token: igConnection.access_token
               })
@@ -208,7 +301,7 @@ serve(async (req) => {
     const { error: insertError } = await supabaseClient.from('social_media_posts').insert({
       user_id: user.id,
       post_text: postText,
-      image_url: imageUrl,
+      image_url: publicImageUrl || imageUrl,
       headline: headline,
       platforms: platforms,
       facebook_post_id: results.facebook?.post_id || null,
