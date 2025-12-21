@@ -32,3 +32,6 @@ verify_jwt = true
 
 [functions.facebook-oauth-callback]
 verify_jwt = false
+
+[functions.generate-social-caption]
+verify_jwt = true
