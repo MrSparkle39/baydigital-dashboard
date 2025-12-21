@@ -85,34 +85,77 @@ serve(async (req) => {
       console.log('Granted permissions:', JSON.stringify(debugData.data))
     }
 
-    // Get user's pages with explicit fields
+    // Try Method 1: Standard /me/accounts (works for personal pages)
+    let pages: any[] = []
+    
     const pagesResponse = await fetch(
       `https://graph.facebook.com/v18.0/me/accounts?fields=id,name,access_token,category,tasks&access_token=${accessToken}`
     )
-
     const pagesData = await pagesResponse.json()
-    console.log('Pages API response:', JSON.stringify(pagesData))
-
-    if (!pagesResponse.ok) {
-      console.error('Pages API error:', pagesData)
-      throw new Error(pagesData.error?.message || 'Failed to fetch user pages')
+    console.log('Pages API (/me/accounts) response:', JSON.stringify(pagesData))
+    
+    if (pagesResponse.ok && pagesData.data && pagesData.data.length > 0) {
+      pages = pagesData.data
     }
 
-    const pages = pagesData.data || []
+    // Try Method 2: If no pages found, try fetching via Business accounts
+    if (pages.length === 0) {
+      console.log('No pages from /me/accounts, trying /me/businesses...')
+      
+      const businessResponse = await fetch(
+        `https://graph.facebook.com/v18.0/me/businesses?fields=id,name,owned_pages{id,name,access_token,category,tasks}&access_token=${accessToken}`
+      )
+      const businessData = await businessResponse.json()
+      console.log('Business API response:', JSON.stringify(businessData))
+      
+      if (businessResponse.ok && businessData.data) {
+        for (const business of businessData.data) {
+          console.log(`Checking business: ${business.name} (${business.id})`)
+          if (business.owned_pages && business.owned_pages.data) {
+            pages.push(...business.owned_pages.data)
+          }
+        }
+      }
+    }
+
+    // Try Method 3: Query businesses directly for client_pages
+    if (pages.length === 0) {
+      console.log('No pages from businesses.owned_pages, trying client_pages...')
+      
+      const businessResponse = await fetch(
+        `https://graph.facebook.com/v18.0/me/businesses?fields=id,name&access_token=${accessToken}`
+      )
+      const businessData = await businessResponse.json()
+      
+      if (businessResponse.ok && businessData.data) {
+        for (const business of businessData.data) {
+          // Try to get pages this user has access to via the business
+          const bizPagesResponse = await fetch(
+            `https://graph.facebook.com/v18.0/${business.id}/client_pages?fields=id,name,access_token,category&access_token=${accessToken}`
+          )
+          const bizPagesData = await bizPagesResponse.json()
+          console.log(`Business ${business.name} client_pages:`, JSON.stringify(bizPagesData))
+          
+          if (bizPagesResponse.ok && bizPagesData.data) {
+            pages.push(...bizPagesData.data)
+          }
+        }
+      }
+    }
+
+    // Get user info for error message
+    const userResponse = await fetch(
+      `https://graph.facebook.com/v18.0/me?fields=id,name&access_token=${accessToken}`
+    )
+    const userData = await userResponse.json()
+    console.log('User data:', JSON.stringify(userData))
 
     if (pages.length === 0) {
-      // Check if this is a permissions issue
-      const permCheck = await fetch(
-        `https://graph.facebook.com/v18.0/me?fields=id,name&access_token=${accessToken}`
-      )
-      const userData = await permCheck.json()
-      console.log('User data:', JSON.stringify(userData))
-      
       throw new Error(
-        'No Facebook Pages found. This usually means: ' +
-        '1) Your Facebook app is in Development mode - add yourself as a Tester in Facebook Developer Console, OR ' +
-        '2) You did not grant page permissions during login - try disconnecting and reconnecting, OR ' +
-        '3) You are not an admin of any Facebook Pages.'
+        'No Facebook Pages found. Your page may be owned by a Business Portfolio. ' +
+        'Please ensure: 1) You have added the Bay Digital app to your Business Portfolio in Meta Business Settings, ' +
+        '2) You have assigned the page to the app, OR ' +
+        '3) Try creating a Page directly from your personal Facebook account (not through Business Suite).'
       )
     }
 
@@ -120,7 +163,20 @@ serve(async (req) => {
 
     // For now, use the first page (in production, you'd let user choose)
     const page = pages[0]
-    const pageAccessToken = page.access_token
+    
+    // If page doesn't have access_token, we need to get one
+    let pageAccessToken = page.access_token
+    if (!pageAccessToken) {
+      console.log('Page has no access_token, attempting to get one...')
+      // Try to get page access token using the user token
+      const pageTokenResponse = await fetch(
+        `https://graph.facebook.com/v18.0/${page.id}?fields=access_token&access_token=${accessToken}`
+      )
+      const pageTokenData = await pageTokenResponse.json()
+      console.log('Page token response:', JSON.stringify(pageTokenData))
+      pageAccessToken = pageTokenData.access_token || accessToken
+    }
+    
     const pageId = page.id
     const pageName = page.name
 
@@ -137,6 +193,7 @@ serve(async (req) => {
 
       if (igResponse.ok) {
         const igData = await igResponse.json()
+        console.log('Instagram check response:', JSON.stringify(igData))
         if (igData.instagram_business_account) {
           instagramAccountId = igData.instagram_business_account.id
 
