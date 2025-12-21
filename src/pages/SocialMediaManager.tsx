@@ -6,18 +6,16 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Loader2, Sparkles, Share2, Facebook, Instagram, Image as ImageIcon, RefreshCw } from "lucide-react";
+import { Loader2, Sparkles, Share2, Facebook, Instagram, Image as ImageIcon, RefreshCw, Search, X, Type } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-interface GeneratedPost {
-  post_text: string;
-  headline: string;
-  images: Array<{
-    id: string;
-    url: string;
-    thumbnail: string;
-  }>;
+interface FreepikImage {
+  id: string;
+  title: string;
+  thumbnail: { url: string };
+  preview: { url: string };
 }
 
 interface SocialConnection {
@@ -27,15 +25,15 @@ interface SocialConnection {
 }
 
 export default function SocialMediaManager() {
-  const [topic, setTopic] = useState("");
-  const [tone, setTone] = useState("professional");
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [postText, setPostText] = useState("");
   const [isPosting, setIsPosting] = useState(false);
   
-  const [generatedPost, setGeneratedPost] = useState<GeneratedPost | null>(null);
-  const [selectedImageId, setSelectedImageId] = useState<string>("");
-  const [editedPostText, setEditedPostText] = useState("");
-  const [editedHeadline, setEditedHeadline] = useState("");
+  // Image search state
+  const [imageSearchQuery, setImageSearchQuery] = useState("");
+  const [isSearchingImages, setIsSearchingImages] = useState(false);
+  const [searchResults, setSearchResults] = useState<FreepikImage[]>([]);
+  const [selectedImage, setSelectedImage] = useState<FreepikImage | null>(null);
+  const [postType, setPostType] = useState<"text" | "image">("text");
   
   const [platforms, setPlatforms] = useState({
     facebook: false,
@@ -101,19 +99,20 @@ export default function SocialMediaManager() {
     }
   };
 
-  const generatePost = async () => {
-    if (!topic.trim()) {
-      toast.error("Please enter a topic");
+  // Search for images using Freepik API
+  const searchImages = async () => {
+    if (!imageSearchQuery.trim()) {
+      toast.error("Please enter a search term");
       return;
     }
 
-    setIsGenerating(true);
+    setIsSearchingImages(true);
     try {
       const { data: session } = await supabase.auth.getSession();
       if (!session.session) throw new Error("Not authenticated");
 
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-social-post`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/freepik-api`,
         {
           method: "POST",
           headers: {
@@ -121,135 +120,40 @@ export default function SocialMediaManager() {
             Authorization: `Bearer ${session.session.access_token}`,
           },
           body: JSON.stringify({
-            topic,
-            tone,
+            action: "search",
+            query: imageSearchQuery,
+            page: 1,
+            limit: 9,
+            filters: { type: "photo" }
           }),
         }
       );
 
-      if (!response.ok) throw new Error("Failed to generate post");
+      if (!response.ok) throw new Error("Failed to search images");
 
       const data = await response.json();
-      setGeneratedPost(data);
-      setEditedPostText(data.post_text);
-      setEditedHeadline(data.headline);
+      const images = data.data || [];
       
-      if (data.images && data.images.length > 0) {
-        setSelectedImageId(data.images[0].id);
+      setSearchResults(images.map((img: any) => ({
+        id: img.id || String(Math.random()),
+        title: img.title || "Stock Image",
+        thumbnail: { url: img.thumbnail?.url || img.image?.source?.url },
+        preview: { url: img.preview?.url || img.image?.source?.url || img.thumbnail?.url }
+      })));
+      
+      if (images.length === 0) {
+        toast.info("No images found. Try a different search term.");
       }
-      
-      toast.success("Post generated successfully!");
     } catch (error) {
-      console.error("Error generating post:", error);
-      toast.error("Failed to generate post");
+      console.error("Error searching images:", error);
+      toast.error("Failed to search images");
     } finally {
-      setIsGenerating(false);
+      setIsSearchingImages(false);
     }
-  };
-
-  const createBrandedImage = async (): Promise<string> => {
-    if (!generatedPost || !selectedImageId) {
-      throw new Error("No image selected");
-    }
-
-    const selectedImage = generatedPost.images.find(img => img.id === selectedImageId);
-    if (!selectedImage) {
-      throw new Error("Selected image not found");
-    }
-
-    // Get brand color from user settings (default to TIC teal)
-    const brandColor = "#00bcd4"; // TODO: Get from user settings
-    
-    const canvas = canvasRef.current;
-    if (!canvas) throw new Error("Canvas not available");
-    
-    const ctx = canvas.getContext('2d');
-    if (!ctx) throw new Error("Canvas context not available");
-
-    // Set canvas size for Instagram square
-    canvas.width = 1080;
-    canvas.height = 1080;
-
-    // Load and draw image
-    await new Promise((resolve, reject) => {
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.onload = () => {
-        // Draw image (cover fit)
-        const scale = Math.max(canvas.width / img.width, canvas.height / img.height);
-        const x = (canvas.width / 2) - (img.width / 2) * scale;
-        const y = (canvas.height / 2) - (img.height / 2) * scale;
-        ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
-        
-        // Add brand color overlay
-        ctx.fillStyle = brandColor + '40'; // 25% opacity
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        // Add headline text
-        ctx.font = 'bold 80px Arial';
-        ctx.fillStyle = 'white';
-        ctx.textAlign = 'center';
-        ctx.shadowColor = 'rgba(0,0,0,0.8)';
-        ctx.shadowBlur = 20;
-        ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 4;
-        
-        // Word wrap headline
-        const words = editedHeadline.split(' ');
-        const lines: string[] = [];
-        let currentLine = words[0];
-        
-        for (let i = 1; i < words.length; i++) {
-          const testLine = currentLine + ' ' + words[i];
-          const metrics = ctx.measureText(testLine);
-          if (metrics.width > canvas.width - 100) {
-            lines.push(currentLine);
-            currentLine = words[i];
-          } else {
-            currentLine = testLine;
-          }
-        }
-        lines.push(currentLine);
-        
-        // Draw lines
-        const lineHeight = 90;
-        const startY = (canvas.height / 2) - ((lines.length - 1) * lineHeight / 2);
-        lines.forEach((line, index) => {
-          ctx.fillText(line, canvas.width / 2, startY + (index * lineHeight));
-        });
-        
-        resolve(true);
-      };
-      img.onerror = reject;
-      img.src = selectedImage.url;
-    });
-
-    // Convert canvas to blob
-    const blob = await new Promise<Blob>((resolve) => {
-      canvas.toBlob((blob) => resolve(blob!), 'image/jpeg', 0.95);
-    });
-
-    // Upload to Supabase Storage
-    const fileName = `social-post-${Date.now()}.jpg`;
-    const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('social-media-images')
-      .upload(fileName, blob, {
-        contentType: 'image/jpeg',
-        upsert: false
-      });
-
-    if (uploadError) throw uploadError;
-
-    // Get public URL
-    const { data: { publicUrl } } = supabase.storage
-      .from('social-media-images')
-      .getPublicUrl(fileName);
-
-    return publicUrl;
   };
 
   const postToSocialMedia = async () => {
-    if (!editedPostText.trim()) {
+    if (!postText.trim()) {
       toast.error("Please enter post text");
       return;
     }
@@ -259,14 +163,24 @@ export default function SocialMediaManager() {
       return;
     }
 
+    // Instagram requires an image
+    if (platforms.instagram && postType === "text") {
+      toast.error("Instagram requires an image. Please add an image or deselect Instagram.");
+      return;
+    }
+
     setIsPosting(true);
     try {
       const { data: session } = await supabase.auth.getSession();
       if (!session.session) throw new Error("Not authenticated");
 
-      // Create branded image
-      toast.info("Creating branded image...");
-      const imageUrl = await createBrandedImage();
+      let imageUrl = null;
+      
+      // If posting with image, get the image URL
+      if (postType === "image" && selectedImage) {
+        toast.info("Preparing image...");
+        imageUrl = selectedImage.preview.url;
+      }
 
       // Post to social media
       toast.info("Posting to social media...");
@@ -283,15 +197,17 @@ export default function SocialMediaManager() {
             Authorization: `Bearer ${session.session.access_token}`,
           },
           body: JSON.stringify({
-            postText: editedPostText,
-            imageUrl,
-            headline: editedHeadline,
+            postText: postText,
+            imageUrl: imageUrl,
             platforms: selectedPlatforms,
           }),
         }
       );
 
-      if (!response.ok) throw new Error("Failed to post");
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to post");
+      }
 
       const data = await response.json();
       
@@ -305,17 +221,19 @@ export default function SocialMediaManager() {
         );
         
         // Reset form
-        setTopic("");
-        setGeneratedPost(null);
-        setEditedPostText("");
-        setEditedHeadline("");
-        setSelectedImageId("");
+        setPostText("");
+        setSelectedImage(null);
+        setSearchResults([]);
+        setImageSearchQuery("");
       } else {
-        toast.error("Some posts failed. Check the results.");
+        const errors = [];
+        if (data.facebook?.error) errors.push(`Facebook: ${data.facebook.error}`);
+        if (data.instagram?.error) errors.push(`Instagram: ${data.instagram.error}`);
+        toast.error(`Some posts failed: ${errors.join(', ')}`);
       }
     } catch (error) {
       console.error("Error posting:", error);
-      toast.error("Failed to post to social media");
+      toast.error(error instanceof Error ? error.message : "Failed to post to social media");
     } finally {
       setIsPosting(false);
     }
@@ -329,11 +247,11 @@ export default function SocialMediaManager() {
         return;
       }
 
-      // Build Facebook OAuth URL - using only permissions available without app review
+      // Build Facebook OAuth URL with all required permissions
       const fbAppId = "1101737005230579";
       const redirectUri = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/facebook-oauth-callback`;
-      // Need business_management to access pages owned by Business Portfolios
-      const scope = "pages_show_list,pages_manage_posts,pages_read_user_content,business_management";
+      // Include Instagram permissions and business_management for Business Portfolio pages
+      const scope = "pages_show_list,pages_manage_posts,pages_read_user_content,pages_read_engagement,business_management,instagram_basic,instagram_content_publish";
       const state = user.id;
 
       const oauthUrl = 
@@ -354,9 +272,11 @@ export default function SocialMediaManager() {
 
   const hasFacebookConnection = connections.some(c => c.platform === 'facebook');
   const hasInstagramConnection = connections.some(c => c.platform === 'facebook' && c.instagram_username);
+  const facebookPageName = connections.find(c => c.platform === 'facebook')?.page_name;
+  const instagramUsername = connections.find(c => c.platform === 'facebook')?.instagram_username;
 
   return (
-    <div className="container mx-auto py-8 max-w-6xl">
+    <div className="container mx-auto py-8 max-w-4xl">
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -364,7 +284,7 @@ export default function SocialMediaManager() {
             Social Media Manager
           </CardTitle>
           <CardDescription>
-            Generate and post engaging content to Facebook and Instagram in seconds
+            Create and post content to Facebook and Instagram
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -372,128 +292,126 @@ export default function SocialMediaManager() {
           {!isLoadingConnections && (
             <Card className="bg-muted/50">
               <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between flex-wrap gap-4">
                   <div className="space-y-2">
                     <h3 className="font-semibold">Connected Accounts</h3>
-                    <div className="flex gap-4">
+                    <div className="flex gap-4 flex-wrap">
                       <div className="flex items-center gap-2">
                         <Facebook className={`h-5 w-5 ${hasFacebookConnection ? 'text-blue-600' : 'text-gray-400'}`} />
                         <span className="text-sm">
-                          {hasFacebookConnection ? 'Connected' : 'Not connected'}
+                          {hasFacebookConnection ? facebookPageName || 'Connected' : 'Not connected'}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
                         <Instagram className={`h-5 w-5 ${hasInstagramConnection ? 'text-pink-600' : 'text-gray-400'}`} />
                         <span className="text-sm">
-                          {hasInstagramConnection ? 'Connected' : 'Not connected'}
+                          {hasInstagramConnection ? `@${instagramUsername}` : 'Not connected'}
                         </span>
                       </div>
                     </div>
                   </div>
-                  {!hasFacebookConnection && (
-                    <Button onClick={connectFacebook} variant="outline">
-                      <Facebook className="h-4 w-4 mr-2" />
-                      Connect Facebook
-                    </Button>
-                  )}
+                  <Button onClick={connectFacebook} variant="outline">
+                    <Facebook className="h-4 w-4 mr-2" />
+                    {hasFacebookConnection ? 'Reconnect' : 'Connect Facebook & Instagram'}
+                  </Button>
                 </div>
               </CardContent>
             </Card>
           )}
 
-          {/* Step 1: Generate Post */}
-          {!generatedPost && (
+          {/* Post Type Selection */}
+          <div className="space-y-2">
+            <Label>Post Type</Label>
+            <Tabs value={postType} onValueChange={(v) => setPostType(v as "text" | "image")} className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="text" className="flex items-center gap-2">
+                  <Type className="h-4 w-4" />
+                  Text Only
+                </TabsTrigger>
+                <TabsTrigger value="image" className="flex items-center gap-2">
+                  <ImageIcon className="h-4 w-4" />
+                  With Image
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+
+          {/* Post Text */}
+          <div className="space-y-2">
+            <Label htmlFor="postText">Post Text</Label>
+            <Textarea
+              id="postText"
+              placeholder="What do you want to share?"
+              value={postText}
+              onChange={(e) => setPostText(e.target.value)}
+              rows={4}
+            />
+            <p className="text-xs text-muted-foreground">{postText.length} characters</p>
+          </div>
+
+          {/* Image Search Section - Only show if image type selected */}
+          {postType === "image" && (
             <div className="space-y-4">
-              <div>
-                <Label htmlFor="topic">What do you want to post about?</Label>
-                <Textarea
-                  id="topic"
-                  placeholder="E.g., We're hiring support workers in Sydney"
-                  value={topic}
-                  onChange={(e) => setTopic(e.target.value)}
-                  rows={3}
-                  className="mt-2"
-                />
+              <div className="space-y-2">
+                <Label>Search for Image</Label>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Search Freepik for images..."
+                    value={imageSearchQuery}
+                    onChange={(e) => setImageSearchQuery(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && searchImages()}
+                  />
+                  <Button 
+                    onClick={searchImages} 
+                    disabled={isSearchingImages || !imageSearchQuery.trim()}
+                    variant="secondary"
+                  >
+                    {isSearchingImages ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Search className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
               </div>
 
-              <div>
-                <Label>Tone</Label>
-                <RadioGroup value={tone} onValueChange={setTone} className="flex gap-4 mt-2">
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="professional" id="professional" />
-                    <Label htmlFor="professional">Professional</Label>
+              {/* Selected Image Preview */}
+              {selectedImage && (
+                <div className="space-y-2">
+                  <Label>Selected Image</Label>
+                  <div className="relative inline-block">
+                    <img
+                      src={selectedImage.preview.url}
+                      alt={selectedImage.title}
+                      className="max-h-48 rounded-lg border"
+                    />
+                    <Button
+                      size="icon"
+                      variant="destructive"
+                      className="absolute -top-2 -right-2 h-6 w-6"
+                      onClick={() => setSelectedImage(null)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="friendly" id="friendly" />
-                    <Label htmlFor="friendly">Friendly</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="casual" id="casual" />
-                    <Label htmlFor="casual">Casual</Label>
-                  </div>
-                </RadioGroup>
-              </div>
+                </div>
+              )}
 
-              <Button 
-                onClick={generatePost} 
-                disabled={isGenerating || !topic.trim()}
-                className="w-full"
-                size="lg"
-              >
-                {isGenerating ? (
-                  <>
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="mr-2 h-5 w-5" />
-                    Generate Post
-                  </>
-                )}
-              </Button>
-            </div>
-          )}
-
-          {/* Step 2: Preview & Edit */}
-          {generatedPost && (
-            <div className="space-y-6">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-semibold">Preview & Edit</h3>
-                <Button
-                  onClick={() => {
-                    setGeneratedPost(null);
-                    setEditedPostText("");
-                    setEditedHeadline("");
-                    setSelectedImageId("");
-                  }}
-                  variant="outline"
-                  size="sm"
-                >
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Start Over
-                </Button>
-              </div>
-
-              {/* Image Selection */}
-              {generatedPost.images.length > 0 && (
-                <div>
-                  <Label>Select Image</Label>
-                  <div className="grid grid-cols-3 gap-4 mt-2">
-                    {generatedPost.images.map((image) => (
+              {/* Image Search Results */}
+              {searchResults.length > 0 && !selectedImage && (
+                <div className="space-y-2">
+                  <Label>Select an Image</Label>
+                  <div className="grid grid-cols-3 gap-3">
+                    {searchResults.map((image) => (
                       <div
                         key={image.id}
-                        onClick={() => setSelectedImageId(image.id)}
-                        className={`cursor-pointer rounded-lg overflow-hidden border-4 transition-all ${
-                          selectedImageId === image.id
-                            ? 'border-primary shadow-lg'
-                            : 'border-transparent hover:border-gray-300'
-                        }`}
+                        onClick={() => setSelectedImage(image)}
+                        className="cursor-pointer rounded-lg overflow-hidden border-2 border-transparent hover:border-primary transition-all"
                       >
                         <img
-                          src={image.thumbnail}
-                          alt="Post image option"
-                          className="w-full h-40 object-cover"
+                          src={image.thumbnail.url}
+                          alt={image.title}
+                          className="w-full h-24 object-cover"
                         />
                       </div>
                     ))}
@@ -501,82 +419,72 @@ export default function SocialMediaManager() {
                 </div>
               )}
 
-              {/* Headline */}
-              <div>
-                <Label htmlFor="headline">Image Headline</Label>
-                <Input
-                  id="headline"
-                  value={editedHeadline}
-                  onChange={(e) => setEditedHeadline(e.target.value)}
-                  placeholder="Short, punchy headline"
-                  className="mt-2"
-                />
-              </div>
-
-              {/* Post Text */}
-              <div>
-                <Label htmlFor="postText">Post Text</Label>
-                <Textarea
-                  id="postText"
-                  value={editedPostText}
-                  onChange={(e) => setEditedPostText(e.target.value)}
-                  rows={6}
-                  className="mt-2"
-                />
-              </div>
-
-              {/* Platform Selection */}
-              <div>
-                <Label>Post to:</Label>
-                <div className="flex gap-4 mt-2">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="facebook"
-                      checked={platforms.facebook}
-                      onCheckedChange={(checked) => setPlatforms({ ...platforms, facebook: !!checked })}
-                      disabled={!hasFacebookConnection}
-                    />
-                    <Label htmlFor="facebook" className="flex items-center gap-2">
-                      <Facebook className="h-4 w-4 text-blue-600" />
-                      Facebook
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="instagram"
-                      checked={platforms.instagram}
-                      onCheckedChange={(checked) => setPlatforms({ ...platforms, instagram: !!checked })}
-                      disabled={!hasInstagramConnection}
-                    />
-                    <Label htmlFor="instagram" className="flex items-center gap-2">
-                      <Instagram className="h-4 w-4 text-pink-600" />
-                      Instagram
-                    </Label>
-                  </div>
-                </div>
-              </div>
-
-              {/* Post Button */}
-              <Button
-                onClick={postToSocialMedia}
-                disabled={isPosting || (!platforms.facebook && !platforms.instagram)}
-                className="w-full"
-                size="lg"
-              >
-                {isPosting ? (
-                  <>
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Posting...
-                  </>
-                ) : (
-                  <>
-                    <Share2 className="mr-2 h-5 w-5" />
-                    Post Now
-                  </>
-                )}
-              </Button>
+              {postType === "image" && !selectedImage && searchResults.length === 0 && (
+                <p className="text-sm text-muted-foreground">
+                  Search for an image above, or switch to "Text Only" for a text-only post.
+                </p>
+              )}
             </div>
           )}
+
+          {/* Platform Selection */}
+          <div className="space-y-2">
+            <Label>Post to:</Label>
+            <div className="flex gap-6">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="facebook"
+                  checked={platforms.facebook}
+                  onCheckedChange={(checked) => setPlatforms({ ...platforms, facebook: !!checked })}
+                  disabled={!hasFacebookConnection}
+                />
+                <Label htmlFor="facebook" className="flex items-center gap-2 cursor-pointer">
+                  <Facebook className="h-4 w-4 text-blue-600" />
+                  Facebook
+                  {!hasFacebookConnection && <span className="text-xs text-muted-foreground">(not connected)</span>}
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="instagram"
+                  checked={platforms.instagram}
+                  onCheckedChange={(checked) => setPlatforms({ ...platforms, instagram: !!checked })}
+                  disabled={!hasInstagramConnection || postType === "text"}
+                />
+                <Label htmlFor="instagram" className="flex items-center gap-2 cursor-pointer">
+                  <Instagram className="h-4 w-4 text-pink-600" />
+                  Instagram
+                  {!hasInstagramConnection && <span className="text-xs text-muted-foreground">(not connected)</span>}
+                  {hasInstagramConnection && postType === "text" && <span className="text-xs text-muted-foreground">(requires image)</span>}
+                </Label>
+              </div>
+            </div>
+          </div>
+
+          {/* Post Button */}
+          <Button
+            onClick={postToSocialMedia}
+            disabled={
+              isPosting || 
+              !postText.trim() || 
+              (!platforms.facebook && !platforms.instagram) ||
+              (postType === "image" && !selectedImage)
+            }
+            className="w-full"
+            size="lg"
+          >
+            {isPosting ? (
+              <>
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                Posting...
+              </>
+            ) : (
+              <>
+                <Share2 className="mr-2 h-5 w-5" />
+                Post Now
+              </>
+            )}
+          </Button>
         </CardContent>
       </Card>
 
