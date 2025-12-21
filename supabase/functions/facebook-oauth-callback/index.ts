@@ -72,9 +72,10 @@ serve(async (req) => {
 
     const longLivedData = await longLivedResponse.json()
     const accessToken = longLivedData.access_token
-    const expiresIn = longLivedData.expires_in // Usually 60 days
+    // Default to 60 days (5184000 seconds) if expires_in is not provided
+    const expiresIn = longLivedData.expires_in || 5184000
 
-    console.log('Got long-lived token, fetching user pages...')
+    console.log('Got long-lived token, expires_in:', expiresIn, ', fetching user pages...')
 
     // First, let's debug what permissions we actually have
     const debugResponse = await fetch(
@@ -213,9 +214,12 @@ serve(async (req) => {
       console.log('No Instagram account connected:', error)
     }
 
-    // Calculate token expiration
+    // Calculate token expiration (safely handle if expiresIn is invalid)
     const expiresAt = new Date()
-    expiresAt.setSeconds(expiresAt.getSeconds() + expiresIn)
+    const secondsToAdd = typeof expiresIn === 'number' && expiresIn > 0 ? expiresIn : 5184000
+    expiresAt.setSeconds(expiresAt.getSeconds() + secondsToAdd)
+    
+    console.log('Token expires at:', expiresAt.toISOString())
 
     // Save to database
     const supabaseClient = createClient(
