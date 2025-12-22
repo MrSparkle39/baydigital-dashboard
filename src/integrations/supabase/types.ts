@@ -174,6 +174,226 @@ export type Database = {
           },
         ]
       }
+      email_aliases: {
+        Row: {
+          alias: string
+          created_at: string | null
+          display_name: string | null
+          domain: string
+          id: string
+          is_default: boolean | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          alias: string
+          created_at?: string | null
+          display_name?: string | null
+          domain: string
+          id?: string
+          is_default?: boolean | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          alias?: string
+          created_at?: string | null
+          display_name?: string | null
+          domain?: string
+          id?: string
+          is_default?: boolean | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      email_attachments: {
+        Row: {
+          content_type: string | null
+          created_at: string | null
+          email_id: string
+          filename: string
+          id: string
+          size_bytes: number | null
+          storage_path: string | null
+        }
+        Insert: {
+          content_type?: string | null
+          created_at?: string | null
+          email_id: string
+          filename: string
+          id?: string
+          size_bytes?: number | null
+          storage_path?: string | null
+        }
+        Update: {
+          content_type?: string | null
+          created_at?: string | null
+          email_id?: string
+          filename?: string
+          id?: string
+          size_bytes?: number | null
+          storage_path?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_attachments_email_id_fkey"
+            columns: ["email_id"]
+            isOneToOne: false
+            referencedRelation: "emails"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_threads: {
+        Row: {
+          alias_id: string | null
+          created_at: string | null
+          id: string
+          is_archived: boolean | null
+          is_read: boolean | null
+          is_starred: boolean | null
+          is_trash: boolean | null
+          last_message_at: string | null
+          message_count: number | null
+          subject: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          alias_id?: string | null
+          created_at?: string | null
+          id?: string
+          is_archived?: boolean | null
+          is_read?: boolean | null
+          is_starred?: boolean | null
+          is_trash?: boolean | null
+          last_message_at?: string | null
+          message_count?: number | null
+          subject?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          alias_id?: string | null
+          created_at?: string | null
+          id?: string
+          is_archived?: boolean | null
+          is_read?: boolean | null
+          is_starred?: boolean | null
+          is_trash?: boolean | null
+          last_message_at?: string | null
+          message_count?: number | null
+          subject?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_threads_alias_id_fkey"
+            columns: ["alias_id"]
+            isOneToOne: false
+            referencedRelation: "email_aliases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      emails: {
+        Row: {
+          alias_id: string | null
+          bcc_addresses: string[] | null
+          body_html: string | null
+          body_text: string | null
+          cc_addresses: string[] | null
+          created_at: string | null
+          direction: string
+          email_references: string[] | null
+          from_address: string
+          from_name: string | null
+          id: string
+          in_reply_to: string | null
+          is_read: boolean | null
+          is_starred: boolean | null
+          message_id: string | null
+          received_at: string | null
+          reply_to: string | null
+          resend_id: string | null
+          sent_at: string | null
+          status: string | null
+          subject: string | null
+          thread_id: string | null
+          to_addresses: string[]
+          user_id: string
+        }
+        Insert: {
+          alias_id?: string | null
+          bcc_addresses?: string[] | null
+          body_html?: string | null
+          body_text?: string | null
+          cc_addresses?: string[] | null
+          created_at?: string | null
+          direction: string
+          email_references?: string[] | null
+          from_address: string
+          from_name?: string | null
+          id?: string
+          in_reply_to?: string | null
+          is_read?: boolean | null
+          is_starred?: boolean | null
+          message_id?: string | null
+          received_at?: string | null
+          reply_to?: string | null
+          resend_id?: string | null
+          sent_at?: string | null
+          status?: string | null
+          subject?: string | null
+          thread_id?: string | null
+          to_addresses: string[]
+          user_id: string
+        }
+        Update: {
+          alias_id?: string | null
+          bcc_addresses?: string[] | null
+          body_html?: string | null
+          body_text?: string | null
+          cc_addresses?: string[] | null
+          created_at?: string | null
+          direction?: string
+          email_references?: string[] | null
+          from_address?: string
+          from_name?: string | null
+          id?: string
+          in_reply_to?: string | null
+          is_read?: boolean | null
+          is_starred?: boolean | null
+          message_id?: string | null
+          received_at?: string | null
+          reply_to?: string | null
+          resend_id?: string | null
+          sent_at?: string | null
+          status?: string | null
+          subject?: string | null
+          thread_id?: string | null
+          to_addresses?: string[]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "emails_alias_id_fkey"
+            columns: ["alias_id"]
+            isOneToOne: false
+            referencedRelation: "email_aliases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "emails_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "email_threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       form_submissions: {
         Row: {
           email: string
