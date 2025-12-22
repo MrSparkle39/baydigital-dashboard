@@ -7,10 +7,11 @@ const corsHeaders = {
 }
 
 // Helper function to download image and upload to Supabase storage
-async function getPublicImageUrl(imageUrl: string, supabaseClient: any, userId: string): Promise<string> {
-  // If it's already a Supabase storage URL, return as-is
+// Returns both the public URL and the file path for cleanup
+async function getPublicImageUrl(imageUrl: string, supabaseClient: any, userId: string): Promise<{ publicUrl: string, filePath: string | null }> {
+  // If it's already a Supabase storage URL, return as-is (no cleanup needed)
   if (imageUrl.includes('supabase.co/storage')) {
-    return imageUrl
+    return { publicUrl: imageUrl, filePath: null }
   }
   
   // If it's a base64 data URL, decode and upload
@@ -25,9 +26,10 @@ async function getPublicImageUrl(imageUrl: string, supabaseClient: any, userId: 
     const binaryData = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0))
     
     const fileName = `social-post-${Date.now()}.${ext}`
+    const filePath = `${userId}/${fileName}`
     const { data: uploadData, error: uploadError } = await supabaseClient.storage
       .from('social-media-images')
-      .upload(`${userId}/${fileName}`, binaryData, {
+      .upload(filePath, binaryData, {
         contentType: `image/${ext}`,
         upsert: false
       })
@@ -39,10 +41,10 @@ async function getPublicImageUrl(imageUrl: string, supabaseClient: any, userId: 
     
     const { data: { publicUrl } } = supabaseClient.storage
       .from('social-media-images')
-      .getPublicUrl(`${userId}/${fileName}`)
+      .getPublicUrl(filePath)
     
     console.log('Uploaded base64 image to:', publicUrl)
-    return publicUrl
+    return { publicUrl, filePath }
   }
   
   // For external URLs (like Freepik), download and re-upload
@@ -54,14 +56,15 @@ async function getPublicImageUrl(imageUrl: string, supabaseClient: any, userId: 
     }
     
     const contentType = response.headers.get('content-type') || 'image/jpeg'
-    const ext = contentType.split('/')[1] || 'jpg'
+    const ext = contentType.split('/')[1]?.split(';')[0] || 'jpg'
     const imageBlob = await response.blob()
     const arrayBuffer = await imageBlob.arrayBuffer()
     
     const fileName = `social-post-${Date.now()}.${ext}`
+    const filePath = `${userId}/${fileName}`
     const { data: uploadData, error: uploadError } = await supabaseClient.storage
       .from('social-media-images')
-      .upload(`${userId}/${fileName}`, arrayBuffer, {
+      .upload(filePath, arrayBuffer, {
         contentType: contentType,
         upsert: false
       })
@@ -73,14 +76,14 @@ async function getPublicImageUrl(imageUrl: string, supabaseClient: any, userId: 
     
     const { data: { publicUrl } } = supabaseClient.storage
       .from('social-media-images')
-      .getPublicUrl(`${userId}/${fileName}`)
+      .getPublicUrl(filePath)
     
     console.log('Re-uploaded image to Supabase:', publicUrl)
-    return publicUrl
+    return { publicUrl, filePath }
   } catch (error) {
     console.error('Error processing image:', error)
     // Return original URL as fallback (might work for Facebook)
-    return imageUrl
+    return { publicUrl: imageUrl, filePath: null }
   }
 }
 
@@ -125,9 +128,13 @@ serve(async (req) => {
     
     // If posting to Instagram, we need a publicly accessible image URL
     let publicImageUrl = imageUrl
+    let tempFilePath: string | null = null
+    
     if (imageUrl && platforms.includes('instagram')) {
       console.log('Processing image for Instagram...')
-      publicImageUrl = await getPublicImageUrl(imageUrl, supabaseAdmin, user.id)
+      const imageResult = await getPublicImageUrl(imageUrl, supabaseAdmin, user.id)
+      publicImageUrl = imageResult.publicUrl
+      tempFilePath = imageResult.filePath
       console.log('Public image URL:', publicImageUrl)
     }
 
@@ -297,11 +304,11 @@ serve(async (req) => {
       }
     }
 
-    // Save post to database
+    // Save post to database (store original imageUrl, not the temp one)
     const { error: insertError } = await supabaseClient.from('social_media_posts').insert({
       user_id: user.id,
       post_text: postText,
-      image_url: publicImageUrl || imageUrl,
+      image_url: imageUrl, // Store original URL, not temp storage URL
       headline: headline,
       platforms: platforms,
       facebook_post_id: results.facebook?.post_id || null,
@@ -315,6 +322,21 @@ serve(async (req) => {
 
     if (insertError) {
       console.error('Failed to save post to database:', insertError)
+    }
+
+    // Cleanup: Delete temporary image from storage after posting
+    if (tempFilePath) {
+      console.log('Cleaning up temporary image:', tempFilePath)
+      const { error: deleteError } = await supabaseAdmin.storage
+        .from('social-media-images')
+        .remove([tempFilePath])
+      
+      if (deleteError) {
+        console.error('Failed to delete temporary image:', deleteError)
+        // Don't throw - posting was successful, cleanup failure is not critical
+      } else {
+        console.log('Successfully deleted temporary image')
+      }
     }
 
     return new Response(
