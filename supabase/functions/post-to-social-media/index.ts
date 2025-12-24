@@ -126,12 +126,12 @@ serve(async (req) => {
 
     console.log('Posting to platforms:', platforms, 'with image:', !!imageUrl)
     
-    // If posting to Instagram, we need a publicly accessible image URL
+    // If posting with an image, we need a publicly accessible image URL for both platforms
     let publicImageUrl = imageUrl
     let tempFilePath: string | null = null
     
-    if (imageUrl && platforms.includes('instagram')) {
-      console.log('Processing image for Instagram...')
+    if (imageUrl) {
+      console.log('Processing image for social media...')
       const imageResult = await getPublicImageUrl(imageUrl, supabaseAdmin, user.id)
       publicImageUrl = imageResult.publicUrl
       tempFilePath = imageResult.filePath
@@ -170,8 +170,9 @@ serve(async (req) => {
           
           let fbResponse;
           
-          if (imageUrl) {
+          if (publicImageUrl) {
             // Post with image using /photos endpoint
+            console.log('Facebook image URL:', publicImageUrl)
             fbResponse = await fetch(
               `https://graph.facebook.com/v18.0/${fbConnection.page_id}/photos`,
               {
@@ -180,7 +181,7 @@ serve(async (req) => {
                   'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                  url: imageUrl,
+                  url: publicImageUrl,
                   caption: postText,
                   access_token: fbConnection.access_token
                 })
