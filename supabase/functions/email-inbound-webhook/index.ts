@@ -22,7 +22,9 @@ serve(async (req) => {
     const payload = await req.json();
     console.log('Received inbound email webhook:', JSON.stringify(payload, null, 2));
 
-    // Resend inbound email payload structure
+    // Resend wraps email data in a 'data' object for webhooks
+    const emailData = payload.data || payload;
+    
     const {
       from,
       to,
@@ -33,11 +35,12 @@ serve(async (req) => {
       html,
       reply_to,
       headers,
-      attachments
-    } = payload;
+      attachments,
+      message_id
+    } = emailData;
 
-    // Extract Message-ID and threading headers
-    const messageId = headers?.['message-id'] || headers?.['Message-ID'] || `${Date.now()}@inbound`;
+    // Extract Message-ID - Resend provides it as message_id in the data
+    const messageId = message_id || headers?.['message-id'] || headers?.['Message-ID'] || `${Date.now()}@inbound`;
     const inReplyTo = headers?.['in-reply-to'] || headers?.['In-Reply-To'];
     const references = headers?.['references'] || headers?.['References'];
 
@@ -80,10 +83,17 @@ serve(async (req) => {
 
     console.log('Matched alias:', matchedAlias.alias, 'for user:', aliasUserId);
 
-    // Parse sender info
-    const fromMatch = from.match(/^(.+?)\s*<(.+)>$/) || [null, null, from];
-    const fromName = fromMatch[1]?.trim() || null;
-    const fromAddress = fromMatch[2] || from;
+    // Parse sender info - handle both "Name <email>" format and plain email
+    let fromName = null;
+    let fromAddress = from;
+    
+    if (from && from.includes('<')) {
+      const fromMatch = from.match(/^(.+?)\s*<(.+)>$/);
+      if (fromMatch) {
+        fromName = fromMatch[1]?.trim() || null;
+        fromAddress = fromMatch[2];
+      }
+    }
 
     // Find or create thread
     let threadId = null;
