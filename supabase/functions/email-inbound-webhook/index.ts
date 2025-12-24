@@ -6,6 +6,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, svix-id, svix-timestamp, svix-signature',
 };
 
+const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -36,8 +38,44 @@ serve(async (req) => {
       reply_to,
       headers,
       attachments,
-      message_id
+      message_id,
+      email_id
     } = emailData;
+
+    // Resend webhook only sends metadata - we need to fetch the full email content
+    let emailText = text;
+    let emailHtml = html;
+    let senderName = null;
+    
+    // If we have an email_id and no body content, fetch from Resend API
+    if (email_id && !text && !html && RESEND_API_KEY) {
+      console.log('Fetching full email content from Resend API for:', email_id);
+      try {
+        const emailResponse = await fetch(`https://api.resend.com/emails/${email_id}`, {
+          headers: {
+            'Authorization': `Bearer ${RESEND_API_KEY}`,
+          }
+        });
+        
+        if (emailResponse.ok) {
+          const fullEmail = await emailResponse.json();
+          console.log('Full email data:', JSON.stringify(fullEmail, null, 2));
+          emailText = fullEmail.text || fullEmail.body_text;
+          emailHtml = fullEmail.html || fullEmail.body_html;
+          // Try to get sender name from full email
+          if (fullEmail.from && fullEmail.from.includes('<')) {
+            const nameMatch = fullEmail.from.match(/^(.+?)\s*<(.+)>$/);
+            if (nameMatch) {
+              senderName = nameMatch[1]?.trim();
+            }
+          }
+        } else {
+          console.error('Failed to fetch email from Resend:', await emailResponse.text());
+        }
+      } catch (fetchError) {
+        console.error('Error fetching full email:', fetchError);
+      }
+    }
 
     // Extract Message-ID - Resend provides it as message_id in the data
     const messageId = message_id || headers?.['message-id'] || headers?.['Message-ID'] || `${Date.now()}@inbound`;
@@ -84,10 +122,10 @@ serve(async (req) => {
     console.log('Matched alias:', matchedAlias.alias, 'for user:', aliasUserId);
 
     // Parse sender info - handle both "Name <email>" format and plain email
-    let fromName = null;
+    let fromName = senderName; // Use name from full email fetch if available
     let fromAddress = from;
     
-    if (from && from.includes('<')) {
+    if (!fromName && from && from.includes('<')) {
       const fromMatch = from.match(/^(.+?)\s*<(.+)>$/);
       if (fromMatch) {
         fromName = fromMatch[1]?.trim() || null;
@@ -176,8 +214,8 @@ serve(async (req) => {
         bcc_addresses: bcc ? (Array.isArray(bcc) ? bcc : [bcc]) : null,
         reply_to: reply_to,
         subject: subject,
-        body_text: text,
-        body_html: html,
+        body_text: emailText,
+        body_html: emailHtml,
         message_id: messageId.replace(/[<>]/g, ''),
         in_reply_to: inReplyTo?.replace(/[<>]/g, ''),
         email_references: referencesArray,
