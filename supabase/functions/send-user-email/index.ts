@@ -137,7 +137,16 @@ serve(async (req) => {
 
     if (!resendResponse.ok) {
       console.error('Resend API error:', resendData);
-      throw new Error(`Failed to send email: ${resendData.message || 'Unknown error'}`);
+      // Map technical errors to user-friendly messages
+      let userMessage = 'Failed to send email. Please try again.';
+      if (resendData.message?.includes('domain is not verified')) {
+        userMessage = 'Email sending is temporarily unavailable. Please contact support.';
+      } else if (resendData.message?.includes('rate limit')) {
+        userMessage = 'Too many emails sent. Please wait a moment and try again.';
+      } else if (resendData.message?.includes('invalid')) {
+        userMessage = 'Invalid email address. Please check the recipient.';
+      }
+      throw new Error(userMessage);
     }
 
     console.log('Email sent via Resend:', resendData);
