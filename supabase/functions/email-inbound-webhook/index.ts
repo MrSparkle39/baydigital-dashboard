@@ -43,15 +43,17 @@ serve(async (req) => {
     } = emailData;
 
     // Resend webhook only sends metadata - we need to fetch the full email content
+    // using the Receiving API endpoint (different from the regular emails API)
     let emailText = text;
     let emailHtml = html;
     let senderName = null;
     
-    // If we have an email_id and no body content, fetch from Resend API
+    // If we have an email_id and no body content, fetch from Resend Receiving API
     if (email_id && !text && !html && RESEND_API_KEY) {
-      console.log('Fetching full email content from Resend API for:', email_id);
+      console.log('Fetching full email content from Resend Receiving API for:', email_id);
       try {
-        const emailResponse = await fetch(`https://api.resend.com/emails/${email_id}`, {
+        // IMPORTANT: For inbound/received emails, use /emails/receiving/{id} endpoint
+        const emailResponse = await fetch(`https://api.resend.com/emails/receiving/${email_id}`, {
           headers: {
             'Authorization': `Bearer ${RESEND_API_KEY}`,
           }
@@ -59,22 +61,25 @@ serve(async (req) => {
         
         if (emailResponse.ok) {
           const fullEmail = await emailResponse.json();
-          console.log('Full email data:', JSON.stringify(fullEmail, null, 2));
-          emailText = fullEmail.text || fullEmail.body_text;
-          emailHtml = fullEmail.html || fullEmail.body_html;
+          console.log('Full email data from Receiving API:', JSON.stringify(fullEmail, null, 2));
+          emailText = fullEmail.text;
+          emailHtml = fullEmail.html;
           // Try to get sender name from full email
-          if (fullEmail.from && fullEmail.from.includes('<')) {
+          if (fullEmail.from && typeof fullEmail.from === 'string' && fullEmail.from.includes('<')) {
             const nameMatch = fullEmail.from.match(/^(.+?)\s*<(.+)>$/);
             if (nameMatch) {
               senderName = nameMatch[1]?.trim();
             }
           }
         } else {
-          console.error('Failed to fetch email from Resend:', await emailResponse.text());
+          const errorText = await emailResponse.text();
+          console.error('Failed to fetch email from Resend Receiving API:', emailResponse.status, errorText);
         }
       } catch (fetchError) {
         console.error('Error fetching full email:', fetchError);
       }
+    } else if (!RESEND_API_KEY) {
+      console.error('RESEND_API_KEY not configured - cannot fetch email body');
     }
 
     // Extract Message-ID - Resend provides it as message_id in the data
