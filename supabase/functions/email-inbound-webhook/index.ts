@@ -129,7 +129,7 @@ serve(async (req) => {
     // Get user info to check notification preferences
     const { data: userData, error: userError } = await supabaseAdmin
       .from('users')
-      .select('email, email_forward_notifications, full_name, business_name')
+      .select('email, email_forward_notifications, notification_email, full_name, business_name')
       .eq('id', aliasUserId)
       .single();
 
@@ -285,7 +285,7 @@ serve(async (req) => {
           },
           body: JSON.stringify({
             from: `Bay Digital <notifications@bay.digital>`,
-            to: [userData.email],
+            to: [userData.notification_email || userData.email],
             subject: notificationSubject,
             html: notificationHtml,
           }),

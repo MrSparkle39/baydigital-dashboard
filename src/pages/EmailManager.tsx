@@ -121,7 +121,10 @@ export default function EmailManager() {
   // Settings
   const [showSettings, setShowSettings] = useState(false);
   const [emailNotificationsEnabled, setEmailNotificationsEnabled] = useState(false);
+  const [notificationEmail, setNotificationEmail] = useState('');
+  const [accountEmail, setAccountEmail] = useState('');
   const [isUpdatingNotifications, setIsUpdatingNotifications] = useState(false);
+  const [isSavingEmail, setIsSavingEmail] = useState(false);
   
   // Search
   const [searchQuery, setSearchQuery] = useState('');
@@ -144,14 +147,44 @@ export default function EmailManager() {
 
       const { data, error } = await supabase
         .from('users')
-        .select('email_forward_notifications')
+        .select('email_forward_notifications, notification_email, email')
         .eq('id', user.id)
         .single();
 
       if (error) throw error;
       setEmailNotificationsEnabled(data?.email_forward_notifications || false);
+      setNotificationEmail(data?.notification_email || '');
+      setAccountEmail(data?.email || '');
     } catch (error) {
       console.error('Error loading notification setting:', error);
+    }
+  };
+
+  const saveNotificationEmail = async () => {
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (notificationEmail && !emailRegex.test(notificationEmail.trim())) {
+      toast.error('Please enter a valid email address');
+      return;
+    }
+
+    setIsSavingEmail(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const { error } = await supabase
+        .from('users')
+        .update({ notification_email: notificationEmail.trim() || null })
+        .eq('id', user.id);
+
+      if (error) throw error;
+      toast.success('Notification email saved');
+    } catch (error) {
+      console.error('Error saving notification email:', error);
+      toast.error('Failed to save notification email');
+    } finally {
+      setIsSavingEmail(false);
     }
   };
 
@@ -882,7 +915,7 @@ export default function EmailManager() {
                     Email Notifications
                   </Label>
                   <p className="text-sm text-muted-foreground">
-                    Get notified at your personal email ({emailNotificationsEnabled ? 'enabled' : 'disabled'}) when new emails arrive
+                    Get notified when new emails arrive
                   </p>
                 </div>
               </div>
@@ -893,9 +926,40 @@ export default function EmailManager() {
                 disabled={isUpdatingNotifications}
               />
             </div>
+
+            {emailNotificationsEnabled && (
+              <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
+                <Label htmlFor="notification-email" className="font-medium">
+                  Notification Email
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Where should we send notifications? Leave empty to use your account email ({accountEmail}).
+                </p>
+                <div className="flex gap-2">
+                  <Input
+                    id="notification-email"
+                    type="email"
+                    placeholder={accountEmail || "your@email.com"}
+                    value={notificationEmail}
+                    onChange={(e) => setNotificationEmail(e.target.value)}
+                  />
+                  <Button 
+                    onClick={saveNotificationEmail} 
+                    disabled={isSavingEmail}
+                    size="sm"
+                  >
+                    {isSavingEmail ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      'Save'
+                    )}
+                  </Button>
+                </div>
+              </div>
+            )}
             
             <p className="text-xs text-muted-foreground">
-              When enabled, you'll receive a brief notification at your account email whenever someone sends an email to your Bay Digital inbox. This helps you stay informed without constantly checking the dashboard.
+              When enabled, you'll receive a brief notification whenever someone sends an email to your Bay Digital inbox.
             </p>
           </div>
 
