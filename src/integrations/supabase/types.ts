@@ -579,6 +579,8 @@ export type Database = {
           platforms: string[]
           post_text: string
           published_at: string | null
+          scheduled_at: string | null
+          scheduled_time_slot: string | null
           site_id: string | null
           status: string
           updated_at: string | null
@@ -597,6 +599,8 @@ export type Database = {
           platforms: string[]
           post_text: string
           published_at?: string | null
+          scheduled_at?: string | null
+          scheduled_time_slot?: string | null
           site_id?: string | null
           status?: string
           updated_at?: string | null
@@ -615,6 +619,8 @@ export type Database = {
           platforms?: string[]
           post_text?: string
           published_at?: string | null
+          scheduled_at?: string | null
+          scheduled_time_slot?: string | null
           site_id?: string | null
           status?: string
           updated_at?: string | null

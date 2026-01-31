@@ -1,21 +1,38 @@
 project_id = "ovhuafsxhdbhaqccfpmt"
 
-[functions.stripe-webhook]
-verify_jwt = false
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "storage"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+major_version = 15
+
+[studio]
+enabled = true
+port = 54323
+
+[auth]
+enabled = true
+site_url = "https://dashboard.bay.digital"
+
+[auth.external.google]
+enabled = false
+
+[storage]
+enabled = true
+file_size_limit = "50MiB"
 
 [functions.create-checkout]
-verify_jwt = false
-
-[functions.fetch-ga4-analytics]
 verify_jwt = true
 
-[functions.freepik-api]
+[functions.create-portal-session]
 verify_jwt = true
 
-[functions.submit-contact-form]
-verify_jwt = false
-
-[functions.send-email]
+[functions.stripe-webhook]
 verify_jwt = false
 
 [functions.generate-blog-post]
@@ -24,23 +41,47 @@ verify_jwt = true
 [functions.publish-blog-post]
 verify_jwt = true
 
+[functions.freepik-api]
+verify_jwt = true
+
+[functions.facebook-oauth-callback]
+verify_jwt = false
+
 [functions.generate-social-post]
 verify_jwt = true
 
 [functions.post-to-social-media]
 verify_jwt = true
 
-[functions.facebook-oauth-callback]
-verify_jwt = false
-
 [functions.generate-social-caption]
 verify_jwt = true
 
+[functions.submit-contact-form]
+verify_jwt = false
+
+[functions.fetch-ga4-analytics]
+verify_jwt = true
+
+[functions.send-email]
+verify_jwt = false
+
 [functions.send-user-email]
 verify_jwt = true
+
+[functions.sync-subscription]
+verify_jwt = false
+
+[functions.verify-checkout]
+verify_jwt = true
+
+[functions.check-onboarding-reminders]
+verify_jwt = false
 
 [functions.email-inbound-webhook]
 verify_jwt = false
 
 [functions.provision-domain]
 verify_jwt = true
+
+[functions.process-scheduled-posts]
+verify_jwt = false
