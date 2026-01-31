@@ -23,6 +23,7 @@ import ShareYourSite from "./pages/ShareYourSite";
 import BlogMaker from "./pages/BlogMaker";
 import SocialMediaManager from "./pages/SocialMediaManager";
 import EmailManager from "./pages/EmailManager";
+import DomainSettings from "./pages/DomainSettings";
 import AdminLayout from "./pages/admin/AdminLayout";
 import AdminOverview from "./pages/admin/Overview";
 import AdminUsers from "./pages/admin/Users";
@@ -57,6 +58,7 @@ const App = () => (
             <Route path="/blogmaker" element={<ProtectedRoute><BlogMaker /></ProtectedRoute>} />
             <Route path="/social-media" element={<ProtectedRoute><SocialMediaManager /></ProtectedRoute>} />
             <Route path="/email" element={<ProtectedRoute><EmailManager /></ProtectedRoute>} />
+            <Route path="/domain-settings" element={<ProtectedRoute><DomainSettings /></ProtectedRoute>} />
             <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
               <Route index element={<AdminOverview />} />
               <Route path="users" element={<AdminUsers />} />
