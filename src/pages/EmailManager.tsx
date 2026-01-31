@@ -9,8 +9,9 @@ import { toast } from "sonner";
 import { 
   Mail, Inbox, Send, Star, Trash2, Archive, RefreshCw, 
   Plus, Search, ChevronLeft, Loader2, Paperclip, Reply,
-  MoreVertical, Settings, X
+  MoreVertical, Settings, X, Bell
 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -117,18 +118,66 @@ export default function EmailManager() {
   const [newAliasDisplayName, setNewAliasDisplayName] = useState('');
   const [isAddingAlias, setIsAddingAlias] = useState(false);
   
+  // Settings
+  const [showSettings, setShowSettings] = useState(false);
+  const [emailNotificationsEnabled, setEmailNotificationsEnabled] = useState(false);
+  const [isUpdatingNotifications, setIsUpdatingNotifications] = useState(false);
+  
   // Search
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Load aliases on mount
+  // Load aliases and settings on mount
   useEffect(() => {
     loadAliases();
+    loadNotificationSetting();
   }, []);
 
   // Load threads when alias or view changes
   useEffect(() => {
     loadThreads();
   }, [selectedAlias, viewMode]);
+
+  const loadNotificationSetting = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('users')
+        .select('email_forward_notifications')
+        .eq('id', user.id)
+        .single();
+
+      if (error) throw error;
+      setEmailNotificationsEnabled(data?.email_forward_notifications || false);
+    } catch (error) {
+      console.error('Error loading notification setting:', error);
+    }
+  };
+
+  const toggleNotificationSetting = async () => {
+    setIsUpdatingNotifications(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const newValue = !emailNotificationsEnabled;
+      const { error } = await supabase
+        .from('users')
+        .update({ email_forward_notifications: newValue })
+        .eq('id', user.id);
+
+      if (error) throw error;
+      
+      setEmailNotificationsEnabled(newValue);
+      toast.success(newValue ? 'Email notifications enabled' : 'Email notifications disabled');
+    } catch (error) {
+      console.error('Error updating notification setting:', error);
+      toast.error('Failed to update notification setting');
+    } finally {
+      setIsUpdatingNotifications(false);
+    }
+  };
 
   const loadAliases = async () => {
     try {
@@ -489,6 +538,20 @@ export default function EmailManager() {
             </p>
           )}
         </div>
+
+        <Separator />
+
+        {/* Settings */}
+        <div className="p-4">
+          <Button
+            variant="ghost"
+            className="w-full justify-start"
+            onClick={() => setShowSettings(true)}
+          >
+            <Settings className="h-4 w-4 mr-3" />
+            Settings
+          </Button>
+        </div>
       </div>
 
       {/* Thread List */}
@@ -795,6 +858,50 @@ export default function EmailManager() {
               ) : (
                 'Add Alias'
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Settings Dialog */}
+      <Dialog open={showSettings} onOpenChange={setShowSettings}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Email Settings</DialogTitle>
+            <DialogDescription>
+              Customize how your email notifications work
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-6">
+            <div className="flex items-center justify-between p-4 border rounded-lg">
+              <div className="flex items-start gap-3">
+                <Bell className="h-5 w-5 text-muted-foreground mt-0.5" />
+                <div className="space-y-1">
+                  <Label htmlFor="email-notifications" className="font-medium">
+                    Email Notifications
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    Get notified at your personal email ({emailNotificationsEnabled ? 'enabled' : 'disabled'}) when new emails arrive
+                  </p>
+                </div>
+              </div>
+              <Switch
+                id="email-notifications"
+                checked={emailNotificationsEnabled}
+                onCheckedChange={toggleNotificationSetting}
+                disabled={isUpdatingNotifications}
+              />
+            </div>
+            
+            <p className="text-xs text-muted-foreground">
+              When enabled, you'll receive a brief notification at your account email whenever someone sends an email to your Bay Digital inbox. This helps you stay informed without constantly checking the dashboard.
+            </p>
+          </div>
+
+          <DialogFooter>
+            <Button onClick={() => setShowSettings(false)}>
+              Done
             </Button>
           </DialogFooter>
         </DialogContent>
