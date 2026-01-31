@@ -41,3 +41,6 @@ verify_jwt = true
 
 [functions.email-inbound-webhook]
 verify_jwt = false
+
+[functions.provision-domain]
+verify_jwt = true

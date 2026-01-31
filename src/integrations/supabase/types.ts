@@ -764,6 +764,62 @@ export type Database = {
           },
         ]
       }
+      user_domains: {
+        Row: {
+          created_at: string
+          dns_records: Json | null
+          domain: string
+          error_message: string | null
+          id: string
+          last_verification_attempt: string | null
+          receiving_enabled: boolean | null
+          region: string | null
+          resend_domain_id: string | null
+          status: string
+          updated_at: string
+          user_id: string
+          verified_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          dns_records?: Json | null
+          domain: string
+          error_message?: string | null
+          id?: string
+          last_verification_attempt?: string | null
+          receiving_enabled?: boolean | null
+          region?: string | null
+          resend_domain_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+          verified_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          dns_records?: Json | null
+          domain?: string
+          error_message?: string | null
+          id?: string
+          last_verification_attempt?: string | null
+          receiving_enabled?: boolean | null
+          region?: string | null
+          resend_domain_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+          verified_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_domains_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string | null
