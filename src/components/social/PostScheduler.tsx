@@ -15,23 +15,74 @@ interface PostSchedulerProps {
 }
 
 const allTimeSlots = [
-  { value: "06:00", label: "6:00 AM", hour: 6 },
-  { value: "07:00", label: "7:00 AM", hour: 7 },
-  { value: "08:00", label: "8:00 AM", hour: 8 },
-  { value: "09:00", label: "9:00 AM", hour: 9 },
-  { value: "10:00", label: "10:00 AM", hour: 10 },
-  { value: "11:00", label: "11:00 AM", hour: 11 },
-  { value: "12:00", label: "12:00 PM", hour: 12 },
-  { value: "13:00", label: "1:00 PM", hour: 13 },
-  { value: "14:00", label: "2:00 PM", hour: 14 },
-  { value: "15:00", label: "3:00 PM", hour: 15 },
-  { value: "16:00", label: "4:00 PM", hour: 16 },
-  { value: "17:00", label: "5:00 PM", hour: 17 },
-  { value: "18:00", label: "6:00 PM", hour: 18 },
-  { value: "19:00", label: "7:00 PM", hour: 19 },
-  { value: "20:00", label: "8:00 PM", hour: 20 },
-  { value: "21:00", label: "9:00 PM", hour: 21 },
-  { value: "22:00", label: "10:00 PM", hour: 22 },
+  { value: "06:00", label: "6:00 AM", hour: 6, minute: 0 },
+  { value: "06:15", label: "6:15 AM", hour: 6, minute: 15 },
+  { value: "06:30", label: "6:30 AM", hour: 6, minute: 30 },
+  { value: "06:45", label: "6:45 AM", hour: 6, minute: 45 },
+  { value: "07:00", label: "7:00 AM", hour: 7, minute: 0 },
+  { value: "07:15", label: "7:15 AM", hour: 7, minute: 15 },
+  { value: "07:30", label: "7:30 AM", hour: 7, minute: 30 },
+  { value: "07:45", label: "7:45 AM", hour: 7, minute: 45 },
+  { value: "08:00", label: "8:00 AM", hour: 8, minute: 0 },
+  { value: "08:15", label: "8:15 AM", hour: 8, minute: 15 },
+  { value: "08:30", label: "8:30 AM", hour: 8, minute: 30 },
+  { value: "08:45", label: "8:45 AM", hour: 8, minute: 45 },
+  { value: "09:00", label: "9:00 AM", hour: 9, minute: 0 },
+  { value: "09:15", label: "9:15 AM", hour: 9, minute: 15 },
+  { value: "09:30", label: "9:30 AM", hour: 9, minute: 30 },
+  { value: "09:45", label: "9:45 AM", hour: 9, minute: 45 },
+  { value: "10:00", label: "10:00 AM", hour: 10, minute: 0 },
+  { value: "10:15", label: "10:15 AM", hour: 10, minute: 15 },
+  { value: "10:30", label: "10:30 AM", hour: 10, minute: 30 },
+  { value: "10:45", label: "10:45 AM", hour: 10, minute: 45 },
+  { value: "11:00", label: "11:00 AM", hour: 11, minute: 0 },
+  { value: "11:15", label: "11:15 AM", hour: 11, minute: 15 },
+  { value: "11:30", label: "11:30 AM", hour: 11, minute: 30 },
+  { value: "11:45", label: "11:45 AM", hour: 11, minute: 45 },
+  { value: "12:00", label: "12:00 PM", hour: 12, minute: 0 },
+  { value: "12:15", label: "12:15 PM", hour: 12, minute: 15 },
+  { value: "12:30", label: "12:30 PM", hour: 12, minute: 30 },
+  { value: "12:45", label: "12:45 PM", hour: 12, minute: 45 },
+  { value: "13:00", label: "1:00 PM", hour: 13, minute: 0 },
+  { value: "13:15", label: "1:15 PM", hour: 13, minute: 15 },
+  { value: "13:30", label: "1:30 PM", hour: 13, minute: 30 },
+  { value: "13:45", label: "1:45 PM", hour: 13, minute: 45 },
+  { value: "14:00", label: "2:00 PM", hour: 14, minute: 0 },
+  { value: "14:15", label: "2:15 PM", hour: 14, minute: 15 },
+  { value: "14:30", label: "2:30 PM", hour: 14, minute: 30 },
+  { value: "14:45", label: "2:45 PM", hour: 14, minute: 45 },
+  { value: "15:00", label: "3:00 PM", hour: 15, minute: 0 },
+  { value: "15:15", label: "3:15 PM", hour: 15, minute: 15 },
+  { value: "15:30", label: "3:30 PM", hour: 15, minute: 30 },
+  { value: "15:45", label: "3:45 PM", hour: 15, minute: 45 },
+  { value: "16:00", label: "4:00 PM", hour: 16, minute: 0 },
+  { value: "16:15", label: "4:15 PM", hour: 16, minute: 15 },
+  { value: "16:30", label: "4:30 PM", hour: 16, minute: 30 },
+  { value: "16:45", label: "4:45 PM", hour: 16, minute: 45 },
+  { value: "17:00", label: "5:00 PM", hour: 17, minute: 0 },
+  { value: "17:15", label: "5:15 PM", hour: 17, minute: 15 },
+  { value: "17:30", label: "5:30 PM", hour: 17, minute: 30 },
+  { value: "17:45", label: "5:45 PM", hour: 17, minute: 45 },
+  { value: "18:00", label: "6:00 PM", hour: 18, minute: 0 },
+  { value: "18:15", label: "6:15 PM", hour: 18, minute: 15 },
+  { value: "18:30", label: "6:30 PM", hour: 18, minute: 30 },
+  { value: "18:45", label: "6:45 PM", hour: 18, minute: 45 },
+  { value: "19:00", label: "7:00 PM", hour: 19, minute: 0 },
+  { value: "19:15", label: "7:15 PM", hour: 19, minute: 15 },
+  { value: "19:30", label: "7:30 PM", hour: 19, minute: 30 },
+  { value: "19:45", label: "7:45 PM", hour: 19, minute: 45 },
+  { value: "20:00", label: "8:00 PM", hour: 20, minute: 0 },
+  { value: "20:15", label: "8:15 PM", hour: 20, minute: 15 },
+  { value: "20:30", label: "8:30 PM", hour: 20, minute: 30 },
+  { value: "20:45", label: "8:45 PM", hour: 20, minute: 45 },
+  { value: "21:00", label: "9:00 PM", hour: 21, minute: 0 },
+  { value: "21:15", label: "9:15 PM", hour: 21, minute: 15 },
+  { value: "21:30", label: "9:30 PM", hour: 21, minute: 30 },
+  { value: "21:45", label: "9:45 PM", hour: 21, minute: 45 },
+  { value: "22:00", label: "10:00 PM", hour: 22, minute: 0 },
+  { value: "22:15", label: "10:15 PM", hour: 22, minute: 15 },
+  { value: "22:30", label: "10:30 PM", hour: 22, minute: 30 },
+  { value: "22:45", label: "10:45 PM", hour: 22, minute: 45 },
 ];
 
 // Minimum buffer time (in minutes) before a scheduled post
@@ -56,13 +107,13 @@ export default function PostScheduler({ onSchedule, isLoading, disabled }: PostS
     const now = new Date();
     const minTime = addMinutes(now, MIN_BUFFER_MINUTES);
     const minHour = minTime.getHours();
-    const minMinutes = minTime.getMinutes();
+    const minMinute = minTime.getMinutes();
     
     return allTimeSlots.filter(slot => {
       // If the hour is greater than the minimum hour, it's available
       if (slot.hour > minHour) return true;
-      // If same hour, check if we're past the minimum minutes (slots are on the hour)
-      if (slot.hour === minHour && minMinutes === 0) return true;
+      // If same hour, check if the slot minute is after the minimum minute
+      if (slot.hour === minHour && slot.minute >= minMinute) return true;
       return false;
     });
   }, [date]);

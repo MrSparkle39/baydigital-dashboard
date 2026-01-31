@@ -388,7 +388,16 @@ export default function SocialMediaManager() {
       if (platforms.facebook) selectedPlatforms.push('facebook');
       if (platforms.instagram) selectedPlatforms.push('instagram');
 
-      const { error } = await supabase
+      console.log('Scheduling post with data:', {
+        user_id: user.id,
+        post_text: postText.substring(0, 50) + '...',
+        image_url: imageUrl ? 'has image' : null,
+        platforms: selectedPlatforms,
+        scheduled_at: scheduledAt.toISOString(),
+        status: 'scheduled'
+      });
+
+      const { data, error } = await supabase
         .from('social_media_posts')
         .insert({
           user_id: user.id,
@@ -397,15 +406,21 @@ export default function SocialMediaManager() {
           platforms: selectedPlatforms,
           scheduled_at: scheduledAt.toISOString(),
           status: 'scheduled'
-        });
+        })
+        .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase insert error:', error);
+        throw error;
+      }
 
+      console.log('Post scheduled successfully:', data);
       toast.success(`Post scheduled for ${scheduledAt.toLocaleString()}`);
       resetForm();
     } catch (error) {
       console.error("Error scheduling post:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to schedule post");
+      const errorMessage = error instanceof Error ? error.message : "Failed to schedule post";
+      toast.error(errorMessage);
     } finally {
       setIsScheduling(false);
     }
