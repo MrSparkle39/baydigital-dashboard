@@ -888,6 +888,7 @@ export type Database = {
           monthly_goals: string | null
           needs_email: boolean | null
           newsletter_signup: boolean | null
+          notification_email: string | null
           onboarding_complete: boolean | null
           onboarding_step: number | null
           phone: string | null
@@ -956,6 +957,7 @@ export type Database = {
           monthly_goals?: string | null
           needs_email?: boolean | null
           newsletter_signup?: boolean | null
+          notification_email?: string | null
           onboarding_complete?: boolean | null
           onboarding_step?: number | null
           phone?: string | null
@@ -1024,6 +1026,7 @@ export type Database = {
           monthly_goals?: string | null
           needs_email?: boolean | null
           newsletter_signup?: boolean | null
+          notification_email?: string | null
           onboarding_complete?: boolean | null
           onboarding_step?: number | null
           phone?: string | null
