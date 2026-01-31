@@ -6,9 +6,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Loader2, Sparkles, Share2, Facebook, Instagram, Image as ImageIcon, Search, X, Type, Upload, ChevronDown } from "lucide-react";
+import { Loader2, Sparkles, Share2, Facebook, Instagram, Image as ImageIcon, Search, X, Type, Upload, ChevronDown, Calendar } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import PostScheduler from "@/components/social/PostScheduler";
+import ScheduledPostsList from "@/components/social/ScheduledPostsList";
 
 interface FreepikImage {
   id: string;
@@ -26,6 +28,7 @@ interface SocialConnection {
 export default function SocialMediaManager() {
   const [postText, setPostText] = useState("");
   const [isPosting, setIsPosting] = useState(false);
+  const [isScheduling, setIsScheduling] = useState(false);
   
   // Image search state
   const [imageSearchQuery, setImageSearchQuery] = useState("");
@@ -45,6 +48,10 @@ export default function SocialMediaManager() {
   const [captionMode, setCaptionMode] = useState<"manual" | "ai">("manual");
   const [aiTopic, setAiTopic] = useState("");
   const [isGeneratingCaption, setIsGeneratingCaption] = useState(false);
+  
+  // Post mode: immediate or schedule
+  const [postMode, setPostMode] = useState<"now" | "schedule">("now");
+  const [scheduledPostsKey, setScheduledPostsKey] = useState(0);
   
   const [platforms, setPlatforms] = useState({
     facebook: false,
@@ -247,6 +254,18 @@ export default function SocialMediaManager() {
     }
   };
 
+  const resetForm = () => {
+    setPostText("");
+    setSelectedImage(null);
+    setUploadedImage(null);
+    setSearchResults([]);
+    setImageSearchQuery("");
+    setAiTopic("");
+    setPostMode("now");
+    // Refresh scheduled posts list
+    setScheduledPostsKey(prev => prev + 1);
+  };
+
   const postToSocialMedia = async () => {
     if (!postText.trim()) {
       toast.error("Please enter post text");
@@ -274,9 +293,6 @@ export default function SocialMediaManager() {
       // If posting with image, get the image URL
       if (postType === "image") {
         if (uploadedImage) {
-          // For uploaded images, we need to handle base64
-          // For now, we'll use the stock image URL approach
-          // A full implementation would upload to storage first
           toast.info("Preparing image...");
           imageUrl = uploadedImage;
         } else if (selectedImage) {
@@ -323,13 +339,7 @@ export default function SocialMediaManager() {
           </div>
         );
         
-        // Reset form
-        setPostText("");
-        setSelectedImage(null);
-        setUploadedImage(null);
-        setSearchResults([]);
-        setImageSearchQuery("");
-        setAiTopic("");
+        resetForm();
       } else {
         const errors = [];
         if (data.facebook?.error) errors.push(`Facebook: ${data.facebook.error}`);
@@ -341,6 +351,63 @@ export default function SocialMediaManager() {
       toast.error(error instanceof Error ? error.message : "Failed to post to social media");
     } finally {
       setIsPosting(false);
+    }
+  };
+
+  const schedulePost = async (scheduledAt: Date) => {
+    if (!postText.trim()) {
+      toast.error("Please enter post text");
+      return;
+    }
+
+    if (!platforms.facebook && !platforms.instagram) {
+      toast.error("Please select at least one platform");
+      return;
+    }
+
+    if (platforms.instagram && postType === "text") {
+      toast.error("Instagram requires an image. Please add an image or deselect Instagram.");
+      return;
+    }
+
+    setIsScheduling(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      let imageUrl = null;
+      if (postType === "image") {
+        if (uploadedImage) {
+          imageUrl = uploadedImage;
+        } else if (selectedImage) {
+          imageUrl = selectedImage.preview.url;
+        }
+      }
+
+      const selectedPlatforms = [];
+      if (platforms.facebook) selectedPlatforms.push('facebook');
+      if (platforms.instagram) selectedPlatforms.push('instagram');
+
+      const { error } = await supabase
+        .from('social_media_posts')
+        .insert({
+          user_id: user.id,
+          post_text: postText,
+          image_url: imageUrl,
+          platforms: selectedPlatforms,
+          scheduled_at: scheduledAt.toISOString(),
+          status: 'scheduled'
+        });
+
+      if (error) throw error;
+
+      toast.success(`Post scheduled for ${scheduledAt.toLocaleString()}`);
+      resetForm();
+    } catch (error) {
+      console.error("Error scheduling post:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to schedule post");
+    } finally {
+      setIsScheduling(false);
     }
   };
 
@@ -389,8 +456,12 @@ export default function SocialMediaManager() {
   const instagramUsername = connections.find(c => c.platform === 'facebook')?.instagram_username;
   const hasImage = selectedImage || uploadedImage;
 
+  const canPost = postText.trim() && 
+    (platforms.facebook || platforms.instagram) && 
+    !(postType === "image" && !hasImage);
+
   return (
-    <div className="container mx-auto py-8 max-w-4xl">
+    <div className="container mx-auto py-8 max-w-4xl space-y-6">
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -398,7 +469,7 @@ export default function SocialMediaManager() {
             Social Media Manager
           </CardTitle>
           <CardDescription>
-            Create and post content to Facebook and Instagram
+            Create and schedule content for Facebook and Instagram
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -411,13 +482,13 @@ export default function SocialMediaManager() {
                     <h3 className="font-semibold">Connected Accounts</h3>
                     <div className="flex gap-4 flex-wrap">
                       <div className="flex items-center gap-2">
-                        <Facebook className={`h-5 w-5 ${hasFacebookConnection ? 'text-blue-600' : 'text-gray-400'}`} />
+                        <Facebook className={`h-5 w-5 ${hasFacebookConnection ? 'text-[hsl(221,44%,41%)]' : 'text-muted-foreground'}`} />
                         <span className="text-sm">
                           {hasFacebookConnection ? facebookPageName || 'Connected' : 'Not connected'}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Instagram className={`h-5 w-5 ${hasInstagramConnection ? 'text-pink-600' : 'text-gray-400'}`} />
+                        <Instagram className={`h-5 w-5 ${hasInstagramConnection ? 'text-[hsl(340,82%,52%)]' : 'text-muted-foreground'}`} />
                         <span className="text-sm">
                           {hasInstagramConnection ? `@${instagramUsername}` : 'Not connected'}
                         </span>
@@ -663,7 +734,7 @@ export default function SocialMediaManager() {
                   disabled={!hasFacebookConnection}
                 />
                 <Label htmlFor="facebook" className="flex items-center gap-2 cursor-pointer">
-                  <Facebook className="h-4 w-4 text-blue-600" />
+                  <Facebook className="h-4 w-4 text-[hsl(221,44%,41%)]" />
                   Facebook
                   {!hasFacebookConnection && <span className="text-xs text-muted-foreground">(not connected)</span>}
                 </Label>
@@ -676,7 +747,7 @@ export default function SocialMediaManager() {
                   disabled={!hasInstagramConnection || postType === "text"}
                 />
                 <Label htmlFor="instagram" className="flex items-center gap-2 cursor-pointer">
-                  <Instagram className="h-4 w-4 text-pink-600" />
+                  <Instagram className="h-4 w-4 text-[hsl(340,82%,52%)]" />
                   Instagram
                   {!hasInstagramConnection && <span className="text-xs text-muted-foreground">(not connected)</span>}
                   {hasInstagramConnection && postType === "text" && <span className="text-xs text-muted-foreground">(requires image)</span>}
@@ -685,32 +756,55 @@ export default function SocialMediaManager() {
             </div>
           </div>
 
-          {/* Post Button */}
-          <Button
-            onClick={postToSocialMedia}
-            disabled={
-              isPosting || 
-              !postText.trim() || 
-              (!platforms.facebook && !platforms.instagram) ||
-              (postType === "image" && !hasImage)
-            }
-            className="w-full"
-            size="lg"
-          >
-            {isPosting ? (
-              <>
-                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                Posting...
-              </>
-            ) : (
-              <>
-                <Share2 className="mr-2 h-5 w-5" />
-                Post Now
-              </>
-            )}
-          </Button>
+          {/* Post Mode Selection */}
+          <div className="space-y-2">
+            <Label>When to post</Label>
+            <Tabs value={postMode} onValueChange={(v) => setPostMode(v as "now" | "schedule")} className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="now" className="flex items-center gap-2">
+                  <Share2 className="h-4 w-4" />
+                  Post Now
+                </TabsTrigger>
+                <TabsTrigger value="schedule" className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  Schedule
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+
+          {/* Post Now Button or Scheduler */}
+          {postMode === "now" ? (
+            <Button
+              onClick={postToSocialMedia}
+              disabled={isPosting || !canPost}
+              className="w-full"
+              size="lg"
+            >
+              {isPosting ? (
+                <>
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  Posting...
+                </>
+              ) : (
+                <>
+                  <Share2 className="mr-2 h-5 w-5" />
+                  Post Now
+                </>
+              )}
+            </Button>
+          ) : (
+            <PostScheduler 
+              onSchedule={schedulePost} 
+              isLoading={isScheduling}
+              disabled={!canPost}
+            />
+          )}
         </CardContent>
       </Card>
+
+      {/* Scheduled Posts List */}
+      <ScheduledPostsList key={scheduledPostsKey} />
 
       {/* Hidden canvas for image processing */}
       <canvas ref={canvasRef} style={{ display: 'none' }} />
