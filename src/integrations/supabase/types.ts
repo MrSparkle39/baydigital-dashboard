@@ -870,6 +870,7 @@ export type Database = {
           domain: string | null
           email: string
           email_count: number | null
+          email_forward_notifications: boolean | null
           emergency_phone: string | null
           emergency_service: boolean | null
           example_websites: string | null
@@ -937,6 +938,7 @@ export type Database = {
           domain?: string | null
           email: string
           email_count?: number | null
+          email_forward_notifications?: boolean | null
           emergency_phone?: string | null
           emergency_service?: boolean | null
           example_websites?: string | null
@@ -1004,6 +1006,7 @@ export type Database = {
           domain?: string | null
           email?: string
           email_count?: number | null
+          email_forward_notifications?: boolean | null
           emergency_phone?: string | null
           emergency_service?: boolean | null
           example_websites?: string | null

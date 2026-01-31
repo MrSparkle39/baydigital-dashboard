@@ -126,6 +126,17 @@ serve(async (req) => {
 
     console.log('Matched alias:', matchedAlias.alias, 'for user:', aliasUserId);
 
+    // Get user info to check notification preferences
+    const { data: userData, error: userError } = await supabaseAdmin
+      .from('users')
+      .select('email, email_forward_notifications, full_name, business_name')
+      .eq('id', aliasUserId)
+      .single();
+
+    if (userError) {
+      console.error('Error fetching user data:', userError);
+    }
+
     // Parse sender info - handle both "Name <email>" format and plain email
     let fromName = senderName; // Use name from full email fetch if available
     let fromAddress = from;
@@ -238,6 +249,59 @@ serve(async (req) => {
     }
 
     console.log('Email saved successfully:', newEmail.id);
+
+    // Send notification email if user has enabled forwarding
+    if (userData?.email_forward_notifications && userData?.email && RESEND_API_KEY) {
+      console.log('Sending notification email to:', userData.email);
+      try {
+        const aliasEmail = `${matchedAlias.alias}@${matchedAlias.domain}`;
+        const notificationSubject = `📬 New email: ${subject || '(No Subject)'}`;
+        const senderDisplay = fromName ? `${fromName} <${fromAddress}>` : fromAddress;
+        const userName = userData.full_name || userData.business_name || 'there';
+        
+        const notificationHtml = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 8px 8px 0 0;">
+              <h2 style="color: white; margin: 0;">New Email Received</h2>
+            </div>
+            <div style="background: #f9fafb; padding: 20px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px;">
+              <p style="color: #374151; margin: 0 0 16px 0;">Hi ${userName},</p>
+              <p style="color: #374151; margin: 0 0 16px 0;">You've received a new email at <strong>${aliasEmail}</strong>:</p>
+              <div style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+                <p style="margin: 0 0 8px 0;"><strong>From:</strong> ${senderDisplay}</p>
+                <p style="margin: 0 0 8px 0;"><strong>Subject:</strong> ${subject || '(No Subject)'}</p>
+                <p style="margin: 0; color: #6b7280; font-size: 14px;"><strong>Preview:</strong> ${(emailText || '').substring(0, 150)}${(emailText || '').length > 150 ? '...' : ''}</p>
+              </div>
+              <p style="color: #6b7280; font-size: 14px; margin: 0;">Log in to your Bay Digital dashboard to read and reply to this email.</p>
+            </div>
+          </div>
+        `;
+
+        const notificationResponse = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${RESEND_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            from: `Bay Digital <notifications@bay.digital>`,
+            to: [userData.email],
+            subject: notificationSubject,
+            html: notificationHtml,
+          }),
+        });
+
+        if (!notificationResponse.ok) {
+          const errorText = await notificationResponse.text();
+          console.error('Failed to send notification email:', errorText);
+        } else {
+          console.log('Notification email sent successfully');
+        }
+      } catch (notifError) {
+        console.error('Error sending notification email:', notifError);
+        // Don't throw - notification failure shouldn't fail the webhook
+      }
+    }
 
     // Handle attachments if any
     if (attachments && attachments.length > 0) {
