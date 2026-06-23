@@ -85,3 +85,7 @@ verify_jwt = true
 
 [functions.process-scheduled-posts]
 verify_jwt = false
+
+# Public domain availability check (called from the marketing site).
+[functions.check-domain]
+verify_jwt = false

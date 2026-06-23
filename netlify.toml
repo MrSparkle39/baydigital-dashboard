@@ -1,0 +1,17 @@
+# Netlify build configuration for the Bay.Digital site (marketing + dashboard).
+# Committing this means Netlify reads the build settings from the repo instead
+# of relying on values typed into the Netlify UI.
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# SPA fallback: every unmatched path serves index.html so client-side routes
+# like /domains work on direct load / refresh. (Mirrors public/_redirects.)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

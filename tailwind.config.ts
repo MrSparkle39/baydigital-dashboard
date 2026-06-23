@@ -14,6 +14,17 @@ export default {
     },
     extend: {
       colors: {
+        /* Bay.Digital marketing palette (additive, scoped to marketing pages). */
+        bay: {
+          navy: "#0A1F44",
+          "navy-deep": "#071533",
+          ink: "#0B1B3A",
+          blue: "#1E6BFF",
+          "blue-dark": "#1450CC",
+          sky: "#3BA0FF",
+          mist: "#F4F8FF",
+          grey: "#F4F6FA",
+        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",

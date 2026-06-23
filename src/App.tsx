@@ -7,6 +7,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AdminRoute } from "@/components/AdminRoute";
 import Index from "./pages/Index";
+import Domains from "./pages/marketing/Domains";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Submissions from "./pages/Submissions";
@@ -43,6 +44,7 @@ const App = () => (
         <AuthProvider>
           <Routes>
             <Route path="/" element={<Index />} />
+            <Route path="/domains" element={<Domains />} />
             <Route path="/login" element={<Login />} />
             <Route path="/success" element={<Success />} />
             <Route path="/signup-success" element={<SignupSuccess />} />
