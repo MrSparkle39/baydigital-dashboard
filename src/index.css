@@ -86,3 +86,40 @@ All colors MUST be HSL.
     @apply bg-background text-foreground;
   }
 }
+
+@layer utilities {
+  @keyframes hero-sculpture-float {
+    0%,
+    100% {
+      transform: translate3d(0, 0, 0);
+    }
+    50% {
+      transform: translate3d(0, -14px, 0);
+    }
+  }
+
+  .hero-sculpture-float {
+    animation: hero-sculpture-float 7s ease-in-out infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hero-sculpture-float {
+      animation: none;
+    }
+  }
+
+  /* Fade artwork edges so the image rectangle never hard-cuts into the page */
+  .hero-artwork-mask {
+    transform: translateZ(0);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    -webkit-mask-image:
+      linear-gradient(to bottom, black 0%, black 40%, transparent 76%),
+      linear-gradient(to right, transparent 0%, rgba(0, 0, 0, 0.35) 20%, black 38%);
+    mask-image:
+      linear-gradient(to bottom, black 0%, black 40%, transparent 76%),
+      linear-gradient(to right, transparent 0%, rgba(0, 0, 0, 0.35) 20%, black 38%);
+    -webkit-mask-composite: source-in;
+    mask-composite: intersect;
+  }
+}

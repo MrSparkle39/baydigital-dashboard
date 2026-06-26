@@ -13,17 +13,25 @@ import {
   ShieldCheck,
   Check,
   ArrowRight,
+  Play,
 } from "lucide-react";
 import { MarketingHeader } from "@/components/marketing/MarketingHeader";
 import { MarketingFooter } from "@/components/marketing/MarketingFooter";
-import { HeroMockup } from "@/components/marketing/HeroMockup";
 import { DomainSearch } from "@/components/marketing/DomainSearch";
 
 const TRUST_POINTS = [
   "No lock-in contracts",
-  "Domain included while subscribed",
   "Business email included",
+  "Domain included",
   "First draft in 48 hours",
+];
+
+const HERO_SERVICES = [
+  "Websites",
+  "Domains",
+  "Business Email",
+  "Automations",
+  "Forms",
 ];
 
 const OFFER_CARDS = [
@@ -124,63 +132,93 @@ const Home = () => {
   }, [location]);
 
   return (
-    <div className="min-h-screen bg-white text-bay-navy">
+    <main className="relative min-h-screen overflow-x-hidden bg-[linear-gradient(135deg,#ffffff_0%,#f7f9ff_38%,#e8efff_65%,#86a2ff_100%)] text-bay-navy">
       <MarketingHeader />
 
-      {/* Hero */}
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 -z-10 bg-gradient-to-b from-bay-mist to-white" />
-        <div className="mx-auto grid max-w-7xl items-center gap-12 px-4 py-16 sm:px-6 lg:grid-cols-2 lg:gap-8 lg:py-24 lg:px-8">
-          <div>
-            <span className="inline-flex items-center gap-2 rounded-full border border-bay-blue/20 bg-white px-3 py-1 text-xs font-semibold text-bay-blue">
+      {/* Decorative layers live on the page — not clipped to the hero section */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 z-0 h-[min(920px,105vh)]"
+      >
+        <picture className="absolute right-[-6%] top-[120px] z-0 w-[65vw] max-w-[980px] max-md:right-[-14%] max-md:top-[88px] max-md:w-[92vw]">
+          <source
+            type="image/webp"
+            srcSet="/images/hero-bg.webp 1024w, /images/hero-bg@2x.webp 2048w"
+            sizes="(max-width: 768px) 92vw, 65vw"
+          />
+          <img
+            src="/images/hero-bg.png"
+            srcSet="/images/hero-bg.png 1024w, /images/hero-bg@2x.png 2048w"
+            sizes="(max-width: 768px) 92vw, 65vw"
+            width={2048}
+            height={1364}
+            alt=""
+            decoding="async"
+            fetchPriority="high"
+            className="hero-artwork-mask h-auto w-full object-contain object-right opacity-95 saturate-[1.12] contrast-[1.08] max-md:opacity-75 max-md:saturate-[1.08] md:opacity-95"
+          />
+        </picture>
+        <div className="absolute left-0 top-[72px] h-[min(760px,88vh)] w-full max-w-[min(960px,72vw)] bg-[radial-gradient(ellipse_95%_72%_at_0%_22%,white_0%,rgba(255,255,255,0.82)_38%,transparent_70%)]" />
+      </div>
+
+      {/* Hero content */}
+      <section className="relative z-10 min-h-[720px]">
+        <div className="relative mx-auto max-w-7xl px-4 pt-24 pb-8 sm:px-6 lg:px-8 lg:pt-32">
+          <div className="max-w-xl">
+            <span className="inline-flex items-center rounded-full border border-bay-blue/15 bg-white/80 px-3 py-1 text-xs font-semibold text-bay-blue backdrop-blur-sm">
               Websites · Domains · Email · Tools
             </span>
-            <h1 className="mt-5 text-4xl font-extrabold leading-[1.1] tracking-tight text-bay-navy sm:text-5xl lg:text-6xl">
-              We build your website.{" "}
-              <span className="bg-gradient-to-r from-bay-blue to-bay-sky bg-clip-text text-transparent">
-                You run your business.
-              </span>
+            <h1 className="mt-5 text-4xl font-extrabold leading-[1.08] tracking-tight text-bay-navy sm:text-5xl lg:text-[3.35rem]">
+              We build your website.
+              <br />
+              <span className="text-bay-blue">You run your business.</span>
             </h1>
-            <p className="mt-5 max-w-xl text-lg text-bay-navy/65">
-              Websites, domains, business email and simple digital tools for small businesses.
+            <p className="mt-5 text-lg leading-relaxed text-bay-navy/60">
+              Everything your business needs online. One simple monthly price.
             </p>
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <button
                 onClick={() => navigate("/#pricing")}
-                className="inline-flex items-center justify-center gap-2 rounded-full bg-bay-blue px-7 py-3.5 font-semibold text-white shadow-lg shadow-bay-blue/25 transition-all hover:bg-bay-blue-dark"
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-bay-blue px-7 py-3.5 font-semibold text-white shadow-lg shadow-bay-blue/25 transition-colors hover:bg-bay-blue-dark"
               >
                 Get Started <ArrowRight className="h-4 w-4" />
               </button>
               <Link
-                to="/domains"
-                className="inline-flex items-center justify-center gap-2 rounded-full border border-bay-navy/15 bg-white px-7 py-3.5 font-semibold text-bay-navy transition-all hover:border-bay-blue/40 hover:text-bay-blue"
+                to="/#offer"
+                className="inline-flex items-center justify-center gap-2 rounded-full border border-bay-navy/10 bg-white/80 px-7 py-3.5 font-semibold text-bay-navy backdrop-blur-sm transition-colors hover:border-bay-blue/30 hover:text-bay-blue"
               >
-                Search Domains
+                <Play className="h-4 w-4 fill-current" />
+                See how it works
               </Link>
             </div>
 
             <ul className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
               {TRUST_POINTS.map((point) => (
-                <li key={point} className="flex items-center gap-2 text-sm font-medium text-bay-navy/75">
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-bay-blue/10">
+                <li key={point} className="flex items-center gap-2 text-sm font-medium text-bay-navy/70">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-bay-blue/10">
                     <Check className="h-3 w-3 text-bay-blue" />
                   </span>
                   {point}
                 </li>
               ))}
             </ul>
-          </div>
 
-          <div className="lg:pl-6">
-            <HeroMockup />
+            <div className="mt-10 border-t border-bay-navy/10 pt-6">
+              <p className="text-sm font-medium text-bay-navy/70">
+                Built for small businesses, clubs and service providers
+              </p>
+              <p className="mt-2 text-sm font-semibold text-bay-navy/50">
+                {HERO_SERVICES.join(" · ")}
+              </p>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Main offer */}
-      <section id="offer" className="scroll-mt-20 py-20">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <section id="offer" className="relative z-10 scroll-mt-20 bg-transparent px-4 pt-12 pb-24 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl">
           <SectionHeading
             eyebrow="What's included"
             title="Everything your business needs online"
@@ -204,7 +242,7 @@ const Home = () => {
       </section>
 
       {/* Domain section */}
-      <section id="domains" className="scroll-mt-20 bg-bay-mist py-20">
+      <section id="domains" className="relative z-10 scroll-mt-20 bg-transparent py-20">
         <div className="mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
           <SectionHeading
             eyebrow="Domains"
@@ -218,7 +256,7 @@ const Home = () => {
       </section>
 
       {/* Pricing */}
-      <section id="pricing" className="scroll-mt-20 py-20">
+      <section id="pricing" className="relative z-10 scroll-mt-20 bg-transparent py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <SectionHeading
             eyebrow="Pricing"
@@ -276,7 +314,7 @@ const Home = () => {
       </section>
 
       {/* Products */}
-      <section id="products" className="scroll-mt-20 bg-bay-mist py-20">
+      <section id="products" className="relative z-10 scroll-mt-20 bg-transparent py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <SectionHeading
             eyebrow="The ecosystem"
@@ -303,7 +341,7 @@ const Home = () => {
       </section>
 
       {/* Examples */}
-      <section id="examples" className="scroll-mt-20 py-20">
+      <section id="examples" className="relative z-10 scroll-mt-20 bg-transparent py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <SectionHeading
             eyebrow="Examples"
@@ -330,7 +368,7 @@ const Home = () => {
       </section>
 
       {/* CTA band */}
-      <section className="px-4 pb-20 sm:px-6 lg:px-8">
+      <section className="relative z-10 bg-transparent px-4 pb-20 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl overflow-hidden rounded-3xl bg-gradient-to-br from-bay-navy to-bay-navy-deep px-8 py-14 text-center">
           <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
             Ready to get your business online?
@@ -356,7 +394,7 @@ const Home = () => {
       </section>
 
       <MarketingFooter />
-    </div>
+    </main>
   );
 };
 

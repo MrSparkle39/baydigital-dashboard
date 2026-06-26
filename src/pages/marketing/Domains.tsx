@@ -17,12 +17,20 @@ const Domains = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-white text-bay-navy">
+    <div
+      className="relative min-h-screen text-bay-navy"
+      style={{
+        backgroundImage: "url('/images/page-bg.png')",
+        backgroundSize: "cover",
+        backgroundRepeat: "no-repeat",
+        backgroundAttachment: "fixed",
+        backgroundPosition: "center top",
+      }}
+    >
       <MarketingHeader />
 
       {/* Hero + search */}
       <section className="relative overflow-hidden">
-        <div className="absolute inset-0 -z-10 bg-gradient-to-b from-bay-mist to-white" />
         <div className="mx-auto max-w-3xl px-4 py-16 text-center sm:px-6 lg:py-24 lg:px-8">
           <span className="inline-flex items-center gap-2 rounded-full border border-bay-blue/20 bg-white px-3 py-1 text-xs font-semibold text-bay-blue">
             <Globe className="h-3.5 w-3.5" /> Domain search

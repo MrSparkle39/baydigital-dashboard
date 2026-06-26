@@ -22,7 +22,7 @@ export const MarketingHeader = () => {
   };
 
   return (
-    <header className="sticky top-0 z-50 border-b border-bay-grey/80 bg-white/90 backdrop-blur-md">
+    <header className="sticky top-0 z-50 border-b border-white/50 bg-white/40 backdrop-blur-md">
       <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <Link to="/" className="flex items-center" aria-label="Bay.Digital home">
           <img src={logo} alt="Bay.Digital" className="h-11 w-auto sm:h-12 lg:h-14" />
@@ -65,7 +65,7 @@ export const MarketingHeader = () => {
       </div>
 
       {open && (
-        <div className="border-t border-bay-grey bg-white lg:hidden">
+        <div className="border-t border-white/50 bg-white/40 lg:hidden">
           <nav className="mx-auto flex max-w-7xl flex-col gap-1 px-4 py-4">
             {NAV_LINKS.map((link) => (
               <Link
