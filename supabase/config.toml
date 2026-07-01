@@ -89,3 +89,16 @@ verify_jwt = false
 # Public domain availability check (called from the marketing site).
 [functions.check-domain]
 verify_jwt = false
+
+# Authenticated dashboard domain purchase flow (calls whitelisted proxy).
+[functions.domain-check-live]
+verify_jwt = true
+
+[functions.abn-lookup]
+verify_jwt = true
+
+[functions.domain-checkout]
+verify_jwt = true
+
+[functions.domain-register]
+verify_jwt = true

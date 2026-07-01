@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BookOpen, Mail, Image, Share2, Sparkles, Megaphone, Inbox } from "lucide-react";
+import { BookOpen, Mail, Image, Share2, Sparkles, Megaphone, Inbox, Globe } from "lucide-react";
 import { Link } from "react-router-dom";
 
 export const QuickLinks = () => {
@@ -7,6 +7,7 @@ export const QuickLinks = () => {
     { icon: Sparkles, label: "Blog Maker", href: "/blogmaker", isLink: true },
     { icon: Megaphone, label: "Social Media Manager", href: "/social-media", isLink: true },
     { icon: Inbox, label: "Email Client", href: "/email", isLink: true },
+    { icon: Globe, label: "Get a Domain", href: "/domains/purchase", isLink: true },
     { icon: Image, label: "Stock Photos", href: "/stock-photos", isLink: true },
     { icon: BookOpen, label: "Help Center", href: "/help-center", isLink: true },
     { icon: Mail, label: "Contact Us", href: "/contact-us", isLink: true },

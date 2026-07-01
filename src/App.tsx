@@ -25,6 +25,7 @@ import BlogMaker from "./pages/BlogMaker";
 import SocialMediaManager from "./pages/SocialMediaManager";
 import EmailManager from "./pages/EmailManager";
 import DomainSettings from "./pages/DomainSettings";
+import DomainPurchase from "./pages/DomainPurchase";
 import AdminLayout from "./pages/admin/AdminLayout";
 import AdminOverview from "./pages/admin/Overview";
 import AdminUsers from "./pages/admin/Users";
@@ -61,6 +62,8 @@ const App = () => (
             <Route path="/social-media" element={<ProtectedRoute><SocialMediaManager /></ProtectedRoute>} />
             <Route path="/email" element={<ProtectedRoute><EmailManager /></ProtectedRoute>} />
             <Route path="/domain-settings" element={<ProtectedRoute><DomainSettings /></ProtectedRoute>} />
+            {/* Subscriber-only for now — may move into signup/onboarding later; flow component stays decoupled */}
+            <Route path="/domains/purchase" element={<ProtectedRoute><DomainPurchase /></ProtectedRoute>} />
             <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
               <Route index element={<AdminOverview />} />
               <Route path="users" element={<AdminUsers />} />
