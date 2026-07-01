@@ -62,8 +62,8 @@ const App = () => (
             <Route path="/social-media" element={<ProtectedRoute><SocialMediaManager /></ProtectedRoute>} />
             <Route path="/email" element={<ProtectedRoute><EmailManager /></ProtectedRoute>} />
             <Route path="/domain-settings" element={<ProtectedRoute><DomainSettings /></ProtectedRoute>} />
-            {/* Subscriber-only for now — may move into signup/onboarding later; flow component stays decoupled */}
-            <Route path="/domains/purchase" element={<ProtectedRoute><DomainPurchase /></ProtectedRoute>} />
+            {/* Intentionally public — customer-acquisition entry point; no login required to search or start purchase */}
+            <Route path="/domains/purchase" element={<DomainPurchase />} />
             <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
               <Route index element={<AdminOverview />} />
               <Route path="users" element={<AdminUsers />} />

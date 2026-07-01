@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,14 +23,17 @@ import {
   Search,
   CreditCard,
   Clock,
+  UserPlus,
 } from "lucide-react";
 import {
   AU_STATES,
   ELIGIBILITY_OPTIONS,
+  EMPTY_CHECKOUT_ACCOUNT,
   EMPTY_CUSTOMER_DETAILS,
   STEP_LABELS,
   STEP_ORDER,
   mapEntityTypeToEligibility,
+  type CheckoutAccount,
   type CustomerDetails,
   type DomainCheckLiveResult,
   type PaymentState,
@@ -40,6 +44,7 @@ import {
 const TOTAL_STEPS = STEP_ORDER.length;
 
 export function DomainPurchaseFlow() {
+  const { user } = useAuth();
   const [step, setStep] = useState<PurchaseStep>("search");
   const stepIndex = STEP_ORDER.indexOf(step);
   const progress = ((stepIndex + 1) / TOTAL_STEPS) * 100;
@@ -53,15 +58,26 @@ export function DomainPurchaseFlow() {
   const [details, setDetails] = useState<CustomerDetails>(EMPTY_CUSTOMER_DETAILS);
   const [abnLoading, setAbnLoading] = useState(false);
 
-  // Step 3 — payment (decoupled from register trigger)
+  // Step 3 — account at checkout, then payment (decoupled from register trigger)
+  const [checkoutAccount, setCheckoutAccount] = useState<CheckoutAccount>(EMPTY_CHECKOUT_ACCOUNT);
   const [payment, setPayment] = useState<PaymentState>({ paymentVerified: false, mock: false });
   const [paymentLoading, setPaymentLoading] = useState(false);
+  const [accountLoading, setAccountLoading] = useState(false);
+
+  const accountReady = Boolean(user) || checkoutAccount.ready;
 
   // Step 4 — register
   const [registering, setRegistering] = useState(false);
   const [registerResult, setRegisterResult] = useState<RegisterResult | null>(null);
 
   const selectedDomain = checkResult?.domain ?? query.trim().toLowerCase();
+
+  // Pre-fill checkout email from registrant details when entering payment step
+  useEffect(() => {
+    if (step === "payment" && details.email && !checkoutAccount.email) {
+      setCheckoutAccount((prev) => ({ ...prev, email: details.email }));
+    }
+  }, [step, details.email, checkoutAccount.email]);
 
   const updateDetails = (field: keyof CustomerDetails, value: string) => {
     setDetails((prev) => ({ ...prev, [field]: value }));
@@ -154,12 +170,42 @@ export function DomainPurchaseFlow() {
   };
 
   /**
+   * ACQUISITION: account creation happens at checkout, not before search/details.
+   * Visitors become Bay Digital users here. Replace placeholder with supabase.auth.signUp
+   * or magic-link flow when wiring real auth.
+   */
+  const handleCreateAccountPlaceholder = async () => {
+    const email = checkoutAccount.email.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      toast.error("Please enter a valid email for your account");
+      return;
+    }
+    if (checkoutAccount.password.length < 8) {
+      toast.error("Password must be at least 8 characters");
+      return;
+    }
+
+    setAccountLoading(true);
+    try {
+      // TODO(acquisition): supabase.auth.signUp({ email, password, options: { ... } })
+      setCheckoutAccount((prev) => ({ ...prev, email, ready: true }));
+      toast.success("Account ready (placeholder — wire to real sign-up)");
+    } finally {
+      setAccountLoading(false);
+    }
+  };
+
+  /**
    * SEQUENCING: real Stripe payment must be wired and verified BEFORE the real
    * register call is enabled, so domains are never registered without payment.
    *
    * Mock payment success is a separate dev-only path — it does NOT call domain-register.
    */
   const handleMockPaymentSuccess = async () => {
+    if (!accountReady) {
+      toast.error("Create your account before continuing to payment");
+      return;
+    }
     setPaymentLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("domain-checkout", {
@@ -181,6 +227,10 @@ export function DomainPurchaseFlow() {
   };
 
   const handleStripeCheckout = async () => {
+    if (!accountReady) {
+      toast.error("Create your account before continuing to payment");
+      return;
+    }
     setPaymentLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("domain-checkout", {
@@ -494,14 +544,83 @@ export function DomainPurchaseFlow() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <CreditCard className="h-5 w-5 text-primary" />
-              Payment
+              Account & payment
             </CardTitle>
             <CardDescription>
-              Complete payment for <strong>{selectedDomain}</strong>
+              Create your account, then pay for <strong>{selectedDomain}</strong>
               {checkResult?.costPrice != null && ` — $${checkResult.costPrice.toFixed(2)}`}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
+            {/*
+              ACQUISITION: visitors search and fill registrant details without logging in.
+              Account creation / email capture happens here at checkout — this is when they
+              become a registered Bay Digital user. Wire to supabase.auth.signUp or magic link.
+            */}
+            <div className="rounded-lg border p-4 space-y-4">
+              <div className="flex items-center gap-2">
+                <UserPlus className="h-5 w-5 text-primary" />
+                <p className="font-medium">Your Bay Digital account</p>
+              </div>
+
+              {user ? (
+                <div className="rounded-md bg-muted/50 px-3 py-2 text-sm">
+                  Signed in as <strong>{user.email}</strong> — you can proceed to payment.
+                </div>
+              ) : checkoutAccount.ready ? (
+                <div className="flex items-center gap-2 text-sm text-green-700 dark:text-green-400">
+                  <CheckCircle2 className="h-4 w-4" />
+                  Account ready for <strong>{checkoutAccount.email}</strong>
+                </div>
+              ) : (
+                <>
+                  <p className="text-sm text-muted-foreground">
+                    No account needed until now. Enter your email and a password to continue —
+                    we'll use this to manage your domain and send order updates.
+                  </p>
+                  <div className="space-y-2">
+                    <Label htmlFor="accountEmail">Email for your account *</Label>
+                    <Input
+                      id="accountEmail"
+                      type="email"
+                      placeholder="you@business.com.au"
+                      value={checkoutAccount.email}
+                      onChange={(e) =>
+                        setCheckoutAccount((prev) => ({ ...prev, email: e.target.value }))
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="accountPassword">Password *</Label>
+                    <Input
+                      id="accountPassword"
+                      type="password"
+                      placeholder="At least 8 characters"
+                      value={checkoutAccount.password}
+                      onChange={(e) =>
+                        setCheckoutAccount((prev) => ({ ...prev, password: e.target.value }))
+                      }
+                    />
+                  </div>
+                  <Button
+                    className="w-full"
+                    variant="secondary"
+                    onClick={handleCreateAccountPlaceholder}
+                    disabled={accountLoading}
+                  >
+                    {accountLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    Create account & continue
+                  </Button>
+                  <p className="text-xs text-muted-foreground">
+                    Placeholder — will call real sign-up when wired. Already have an account?{" "}
+                    <a href="/login" className="text-primary hover:underline">
+                      Log in
+                    </a>
+                  </p>
+                </>
+              )}
+            </div>
+
             {/*
               SEQUENCING: real Stripe payment must be wired and verified BEFORE the real
               register call is enabled, so domains are never registered without payment.
@@ -515,11 +634,17 @@ export function DomainPurchaseFlow() {
               className="w-full"
               size="lg"
               onClick={handleStripeCheckout}
-              disabled={paymentLoading}
+              disabled={paymentLoading || !accountReady}
             >
               {paymentLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Pay with Stripe
             </Button>
+
+            {!accountReady && (
+              <p className="text-center text-xs text-muted-foreground">
+                Create your account above to unlock payment
+              </p>
+            )}
 
             {/* Mock path — clearly separated from register; dev/staging only */}
             <div className="rounded-lg border border-dashed border-amber-300 bg-amber-50/50 p-4 dark:border-amber-800 dark:bg-amber-950/20">
@@ -532,7 +657,7 @@ export function DomainPurchaseFlow() {
                 variant="outline"
                 className="mt-3 w-full border-amber-300"
                 onClick={handleMockPaymentSuccess}
-                disabled={paymentLoading}
+                disabled={paymentLoading || !accountReady}
               >
                 Simulate payment success (mock)
               </Button>

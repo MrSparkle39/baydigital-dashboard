@@ -69,6 +69,20 @@ export interface PaymentState {
   mock: boolean;
 }
 
+/** Captured at checkout — visitors become users here, not at search/details. */
+export interface CheckoutAccount {
+  email: string;
+  password: string;
+  /** Set after sign-up succeeds or when visitor is already logged in. */
+  ready: boolean;
+}
+
+export const EMPTY_CHECKOUT_ACCOUNT: CheckoutAccount = {
+  email: "",
+  password: "",
+  ready: false,
+};
+
 export interface RegisterResult {
   status: string;
   message: string;
@@ -105,7 +119,7 @@ export const EMPTY_CUSTOMER_DETAILS: CustomerDetails = {
 export const STEP_LABELS: Record<PurchaseStep, string> = {
   search: "Search",
   details: "Your details",
-  payment: "Payment",
+  payment: "Account & payment",
   confirm: "Confirmation",
 };
 
