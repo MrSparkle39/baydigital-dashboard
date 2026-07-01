@@ -36,6 +36,7 @@ import {
   type CheckoutAccount,
   type CustomerDetails,
   type DomainCheckLiveResult,
+  type DomainCheckLiveResponse,
   type PaymentState,
   type PurchaseStep,
   type RegisterResult,
@@ -52,7 +53,8 @@ export function DomainPurchaseFlow() {
   // Step 1 — search
   const [query, setQuery] = useState("");
   const [checking, setChecking] = useState(false);
-  const [checkResult, setCheckResult] = useState<DomainCheckLiveResult | null>(null);
+  const [searchResponse, setSearchResponse] = useState<DomainCheckLiveResponse | null>(null);
+  const [selectedDomain, setSelectedDomain] = useState<DomainCheckLiveResult | null>(null);
 
   // Step 2 — details
   const [details, setDetails] = useState<CustomerDetails>(EMPTY_CUSTOMER_DETAILS);
@@ -70,7 +72,7 @@ export function DomainPurchaseFlow() {
   const [registering, setRegistering] = useState(false);
   const [registerResult, setRegisterResult] = useState<RegisterResult | null>(null);
 
-  const selectedDomain = checkResult?.domain ?? query.trim().toLowerCase();
+  const selectedDomainName = selectedDomain?.domain ?? "";
 
   // Pre-fill checkout email from registrant details when entering payment step
   useEffect(() => {
@@ -84,33 +86,39 @@ export function DomainPurchaseFlow() {
   };
 
   const handleCheckDomain = async () => {
-    const domain = query.trim().toLowerCase();
-    if (!domain) {
+    const input = query.trim().toLowerCase();
+    if (!input) {
       toast.error("Please enter a domain name");
       return;
     }
 
     setChecking(true);
-    setCheckResult(null);
+    setSearchResponse(null);
+    setSelectedDomain(null);
 
     try {
       const { data, error } = await supabase.functions.invoke("domain-check-live", {
-        body: { domain },
+        body: { query: input },
       });
 
       if (error) throw error;
       if (data?.error) {
         toast.error(data.error);
-        setCheckResult({ domain, available: false, status: "error", costPrice: null, premium: false, error: data.error });
+        setSearchResponse({ query: input, mode: "single", results: [], error: data.error });
         return;
       }
 
-      setCheckResult(data as DomainCheckLiveResult);
+      setSearchResponse(data as DomainCheckLiveResponse);
     } catch {
       toast.error("Couldn't check domain availability. Please try again.");
     } finally {
       setChecking(false);
     }
+  };
+
+  const handleSelectDomain = (result: DomainCheckLiveResult) => {
+    setSelectedDomain(result);
+    setStep("details");
   };
 
   const handleAbnLookup = async () => {
@@ -209,7 +217,7 @@ export function DomainPurchaseFlow() {
     setPaymentLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("domain-checkout", {
-        body: { action: "mock-success", domain: selectedDomain, costPrice: checkResult?.costPrice },
+        body: { action: "mock-success", domain: selectedDomainName, costPrice: selectedDomain?.costPrice },
       });
       if (error) throw error;
       if (data?.error) {
@@ -236,8 +244,8 @@ export function DomainPurchaseFlow() {
       const { data, error } = await supabase.functions.invoke("domain-checkout", {
         body: {
           action: "create-session",
-          domain: selectedDomain,
-          costPrice: checkResult?.costPrice,
+          domain: selectedDomainName,
+          costPrice: selectedDomain?.costPrice,
         },
       });
       if (error) throw error;
@@ -264,7 +272,7 @@ export function DomainPurchaseFlow() {
     try {
       const { data, error } = await supabase.functions.invoke("domain-register", {
         body: {
-          domain: selectedDomain,
+          domain: selectedDomainName,
           firstName: details.firstName,
           lastName: details.lastName,
           organisation: details.organisation,
@@ -311,12 +319,14 @@ export function DomainPurchaseFlow() {
               <Globe className="h-5 w-5 text-primary" />
               Search for a domain
             </CardTitle>
-            <CardDescription>Enter the domain you'd like to register, e.g. yourbusiness.com.au</CardDescription>
+            <CardDescription>
+              Enter a business name to check multiple extensions, or a full domain like yourbusiness.com.au
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex flex-col gap-3 sm:flex-row">
               <Input
-                placeholder="yourbusiness.com.au"
+                placeholder="theinclusioncrew"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleCheckDomain()}
@@ -328,50 +338,68 @@ export function DomainPurchaseFlow() {
                 ) : (
                   <Search className="mr-2 h-4 w-4" />
                 )}
-                Check availability
+                Search
               </Button>
             </div>
 
-            {checkResult && !checkResult.error && (
-              <div
-                className={`rounded-lg border p-4 ${
-                  checkResult.available ? "border-green-200 bg-green-50/50" : "border-muted bg-muted/30"
-                }`}
-              >
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <p className="font-semibold">{checkResult.domain}</p>
-                    <div className="mt-1 flex flex-wrap items-center gap-2">
-                      {checkResult.available ? (
-                        <Badge className="bg-green-600 hover:bg-green-600">Available</Badge>
-                      ) : (
-                        <Badge variant="secondary">Unavailable</Badge>
+            {checking && (
+              <p className="text-sm text-muted-foreground">Checking availability across extensions…</p>
+            )}
+
+            {searchResponse?.error && (
+              <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
+                <span>{searchResponse.error}</span>
+              </div>
+            )}
+
+            {searchResponse && searchResponse.results.length > 0 && (
+              <div className="rounded-lg border divide-y overflow-hidden">
+                {searchResponse.results.map((result) => (
+                  <div
+                    key={result.domain}
+                    className={`flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between ${
+                      result.available ? "bg-green-50/30 dark:bg-green-950/10" : "bg-muted/20"
+                    }`}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold truncate">{result.domain}</p>
+                      <div className="mt-1 flex flex-wrap items-center gap-2">
+                        {result.available ? (
+                          <Badge className="bg-green-600 hover:bg-green-600">Available</Badge>
+                        ) : (
+                          <Badge variant="secondary">Unavailable</Badge>
+                        )}
+                        {result.premium && <Badge variant="outline">Premium</Badge>}
+                        {result.error && (
+                          <span className="text-xs text-muted-foreground">{result.error}</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex shrink-0 items-center gap-3 sm:justify-end">
+                      {result.available && result.costPrice != null && (
+                        <p className="text-lg font-bold tabular-nums">${result.costPrice.toFixed(2)}</p>
                       )}
-                      {checkResult.premium && <Badge variant="outline">Premium</Badge>}
-                      {checkResult.status && (
-                        <span className="text-sm text-muted-foreground">{checkResult.status}</span>
+                      {result.available && (
+                        <Button size="sm" onClick={() => handleSelectDomain(result)}>
+                          Continue with this domain
+                        </Button>
                       )}
                     </div>
                   </div>
-                  {checkResult.available && checkResult.costPrice != null && (
-                    <p className="text-lg font-bold">${checkResult.costPrice.toFixed(2)}</p>
-                  )}
-                </div>
+                ))}
               </div>
             )}
 
-            {checkResult?.error && (
-              <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm">
-                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
-                <span>{checkResult.error}</span>
-              </div>
-            )}
-
-            {checkResult?.available && (
-              <Button className="w-full sm:w-auto" onClick={() => setStep("details")}>
-                Continue with this domain
-              </Button>
-            )}
+            {searchResponse &&
+              searchResponse.results.length > 0 &&
+              !searchResponse.results.some((r) => r.available) && (
+                <p className="text-sm text-muted-foreground">
+                  None of the checked extensions are available for &ldquo;{searchResponse.query}&rdquo;.
+                  Try a different name.
+                </p>
+              )}
           </CardContent>
         </Card>
       )}
@@ -381,7 +409,7 @@ export function DomainPurchaseFlow() {
           <CardHeader>
             <CardTitle>Your details</CardTitle>
             <CardDescription>
-              Registrant information for <strong>{selectedDomain}</strong>
+              Registrant information for <strong>{selectedDomainName}</strong>
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -547,8 +575,8 @@ export function DomainPurchaseFlow() {
               Account & payment
             </CardTitle>
             <CardDescription>
-              Create your account, then pay for <strong>{selectedDomain}</strong>
-              {checkResult?.costPrice != null && ` — $${checkResult.costPrice.toFixed(2)}`}
+              Create your account, then pay for <strong>{selectedDomainName}</strong>
+              {selectedDomain?.costPrice != null && ` — $${selectedDomain.costPrice.toFixed(2)}`}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -684,7 +712,7 @@ export function DomainPurchaseFlow() {
             <CardDescription>
               {registerResult
                 ? registerResult.message
-                : `Submit your registration request for ${selectedDomain}`}
+                : `Submit your registration request for ${selectedDomainName}`}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -699,7 +727,7 @@ export function DomainPurchaseFlow() {
                 <div className="rounded-lg border p-4 text-sm space-y-1">
                   <p>
                     <span className="text-muted-foreground">Domain:</span>{" "}
-                    <strong>{selectedDomain}</strong>
+                    <strong>{selectedDomainName}</strong>
                   </p>
                   <p>
                     <span className="text-muted-foreground">Registrant:</span>{" "}

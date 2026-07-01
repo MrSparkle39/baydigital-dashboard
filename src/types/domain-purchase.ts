@@ -10,6 +10,16 @@ export interface DomainCheckLiveResult {
   error?: string;
 }
 
+export interface DomainCheckLiveResponse {
+  query: string;
+  mode: "multi" | "single";
+  results: DomainCheckLiveResult[];
+  error?: string;
+}
+
+/** TLDs checked for bare-name searches (must match edge function order). */
+export const SEARCH_TLDS = [".com.au", ".au", ".com", ".net.au", ".org.au", ".digital", ".net", ".io"] as const;
+
 export interface AbnLookupResult {
   abn: string;
   entityName: string;
