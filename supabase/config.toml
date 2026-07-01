@@ -90,9 +90,9 @@ verify_jwt = false
 [functions.check-domain]
 verify_jwt = false
 
-# Authenticated dashboard domain purchase flow (calls whitelisted proxy).
+# Public domain availability check for the no-login purchase flow.
 [functions.domain-check-live]
-verify_jwt = true
+verify_jwt = false
 
 [functions.abn-lookup]
 verify_jwt = true
