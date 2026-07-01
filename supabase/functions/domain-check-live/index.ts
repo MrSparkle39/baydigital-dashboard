@@ -63,12 +63,13 @@ serve(async (req) => {
     const proxyData = (await proxyRes.json()) as ProxyResponse;
     const raw = proxyData.raw ?? {};
 
+    const statusStr = typeof raw.status === "string" ? raw.status.toLowerCase() : "";
     const available =
       typeof raw.available === "boolean"
         ? raw.available
-        : typeof raw.status === "string"
-          ? raw.status.toLowerCase().includes("available")
-          : false;
+        : typeof raw.available === "number"
+          ? raw.available === 1
+          : statusStr === "available";
 
     return json(
       {
