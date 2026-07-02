@@ -20,6 +20,35 @@ export interface DomainCheckLiveResponse {
 /** TLDs checked for bare-name searches (must match edge function order). */
 export const SEARCH_TLDS = [".com.au", ".au", ".com", ".net.au", ".org.au", ".digital", ".net", ".io"] as const;
 
+export interface TldPricingRow {
+  tld: string;
+  minPeriod: number;
+  maxPeriod: number;
+  register_1_year: number;
+  register_2_year: number;
+  renew: number;
+  sale?: { register_1_year?: number };
+}
+
+export interface DomainPricingResponse {
+  pricing: TldPricingRow[];
+  cached?: boolean;
+  available?: boolean;
+  error?: string;
+  warning?: string;
+}
+
+/** Customer-facing price breakdown for a search result row. */
+export interface DomainPriceDisplay {
+  registrationAmount: number | null;
+  registrationYears: number;
+  registrationLabel: string;
+  renewalLabel: string | null;
+  saleLabel: string | null;
+  isFallback: boolean;
+  fallbackNote: string | null;
+}
+
 export interface AbnLookupResult {
   abn: string;
   entityName: string;

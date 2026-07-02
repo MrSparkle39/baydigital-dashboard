@@ -37,10 +37,14 @@ import {
   type CustomerDetails,
   type DomainCheckLiveResult,
   type DomainCheckLiveResponse,
+  type DomainPriceDisplay,
   type PaymentState,
   type PurchaseStep,
   type RegisterResult,
+  type TldPricingRow,
 } from "@/types/domain-purchase";
+import { DomainResultPricing } from "@/components/domain/DomainResultPricing";
+import { buildDomainPriceDisplay, fetchDomainPricingTable } from "@/lib/domain/pricing";
 
 const TOTAL_STEPS = STEP_ORDER.length;
 
@@ -55,6 +59,7 @@ export function DomainPurchaseFlow() {
   const [checking, setChecking] = useState(false);
   const [searchResponse, setSearchResponse] = useState<DomainCheckLiveResponse | null>(null);
   const [selectedDomain, setSelectedDomain] = useState<DomainCheckLiveResult | null>(null);
+  const [pricingTable, setPricingTable] = useState<TldPricingRow[]>([]);
 
   // Step 2 — details
   const [details, setDetails] = useState<CustomerDetails>(EMPTY_CUSTOMER_DETAILS);
@@ -73,6 +78,18 @@ export function DomainPurchaseFlow() {
   const [registerResult, setRegisterResult] = useState<RegisterResult | null>(null);
 
   const selectedDomainName = selectedDomain?.domain ?? "";
+
+  const selectedPriceDisplay: DomainPriceDisplay | null = selectedDomain
+    ? buildDomainPriceDisplay(selectedDomain.domain, pricingTable, selectedDomain.costPrice)
+    : null;
+
+  const checkoutAmount =
+    selectedPriceDisplay?.registrationAmount ?? selectedDomain?.costPrice ?? null;
+
+  // Cache pricing table on load (refreshes hourly via lib cache)
+  useEffect(() => {
+    fetchDomainPricingTable().then(({ pricing }) => setPricingTable(pricing));
+  }, []);
 
   // Pre-fill checkout email from registrant details when entering payment step
   useEffect(() => {
@@ -217,7 +234,7 @@ export function DomainPurchaseFlow() {
     setPaymentLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("domain-checkout", {
-        body: { action: "mock-success", domain: selectedDomainName, costPrice: selectedDomain?.costPrice },
+        body: { action: "mock-success", domain: selectedDomainName, costPrice: checkoutAmount },
       });
       if (error) throw error;
       if (data?.error) {
@@ -245,7 +262,7 @@ export function DomainPurchaseFlow() {
         body: {
           action: "create-session",
           domain: selectedDomainName,
-          costPrice: selectedDomain?.costPrice,
+          costPrice: checkoutAmount,
         },
       });
       if (error) throw error;
@@ -377,9 +394,16 @@ export function DomainPurchaseFlow() {
                       </div>
                     </div>
 
-                    <div className="flex shrink-0 items-center gap-3 sm:justify-end">
-                      {result.available && result.costPrice != null && (
-                        <p className="text-lg font-bold tabular-nums">${result.costPrice.toFixed(2)}</p>
+                    <div className="flex shrink-0 flex-col items-end gap-3 sm:flex-row sm:items-center sm:justify-end">
+                      {result.available && (
+                        <DomainResultPricing
+                          display={buildDomainPriceDisplay(
+                            result.domain,
+                            pricingTable,
+                            result.costPrice,
+                          )}
+                          compact
+                        />
                       )}
                       {result.available && (
                         <Button size="sm" onClick={() => handleSelectDomain(result)}>
@@ -576,10 +600,15 @@ export function DomainPurchaseFlow() {
             </CardTitle>
             <CardDescription>
               Create your account, then pay for <strong>{selectedDomainName}</strong>
-              {selectedDomain?.costPrice != null && ` — $${selectedDomain.costPrice.toFixed(2)}`}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
+            {selectedPriceDisplay && (
+              <div className="rounded-lg border bg-muted/20 p-4">
+                <p className="mb-2 text-sm font-medium">Registration cost</p>
+                <DomainResultPricing display={selectedPriceDisplay} />
+              </div>
+            )}
             {/*
               ACQUISITION: visitors search and fill registrant details without logging in.
               Account creation / email capture happens here at checkout — this is when they

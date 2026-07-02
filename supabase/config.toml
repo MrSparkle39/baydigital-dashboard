@@ -102,3 +102,6 @@ verify_jwt = true
 
 [functions.domain-register]
 verify_jwt = true
+
+[functions.domain-pricing]
+verify_jwt = false
